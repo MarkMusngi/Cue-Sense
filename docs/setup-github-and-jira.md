@@ -2,7 +2,7 @@
 
 Do these steps once, in order. Menu names in GitHub and Jira change occasionally, so if a label differs slightly, look for the nearest match.
 
-Replace `PROJ` with your Jira project key and `@your-github-username` with your handle wherever they appear in the repo files.
+The Jira project key is `CUE`. Replace `@your-github-username` with your handle wherever it appears in the repo files.
 
 ## Order of operations
 
@@ -98,14 +98,14 @@ If a check never appears in the list, it has not run yet. Open a throwaway PR so
 
 ### 1. Create the project
 1. In Jira: **Projects → Create project → Software development** (Scrum or Kanban; Kanban is simpler to start).
-2. Name it, and set the **project key** (for example `BILL`). Use this key in place of `PROJ` everywhere in this repo.
+2. Name it, and set the **project key** to `CUE`, which this repo already uses.
 3. Confirm the workflow has statuses along the lines of **To Do → In Progress → In Review → Done**. Add **In Review** if missing (**Project settings → Workflow**).
 
 ### 2. Connect GitHub to Jira
 1. In Jira: **Apps → Explore more apps**, search for **GitHub for Jira** (by Atlassian), and install it.
 2. Open it, choose **Get started**, sign in to GitHub, and authorize the app for your account or organization.
 3. When GitHub asks which repositories to give access to, pick **only this repository**.
-4. Wait for the initial sync. Then check that a test branch named `chore/PROJ-1-test` (using a real issue key) shows up in the **Development** panel of that Jira issue.
+4. Wait for the initial sync. Then check that a test branch named `chore/CUE-1-test` (using a real issue key) shows up in the **Development** panel of that Jira issue.
 
 Jira links work by finding the issue key in branch names, commit messages, and PR titles. That is why `AGENTS.md` and `pr-hygiene.yml` require it.
 
@@ -141,7 +141,7 @@ These triggers appear once GitHub for Jira is connected. If one is missing, re-c
 
 Run through this checklist once:
 
-- [ ] Push a branch named `feat/PROJ-1-test` and open a PR titled `feat(api): test (PROJ-1)`. The `pr-hygiene` check passes.
+- [ ] Push a branch named `feat/CUE-1-test` and open a PR titled `feat(api): test (CUE-1)`. The `pr-hygiene` check passes.
 - [ ] Change the PR title to `test pr`. `pr-hygiene` fails with a clear message. Change it back.
 - [ ] The Jira issue shows the branch and PR under **Development**, and its status moves automatically.
 - [ ] `ci.yml` jobs run on the PR and appear as required checks.

@@ -51,9 +51,9 @@ Changing any of these requires an ADR in `docs/decisions/` first.
 | TS variables and functions | `camelCase` | `snapToGrid` |
 | TS properties mirroring API data | stay `snake_case` | `drill.current_version_id` |
 | Test files | mirror the file under test | `test_drill_service.py` |
-| Git branches | `<type>/<JIRA-KEY>-<kebab-slug>` | `feat/PROJ-42-drill-editor` |
+| Git branches | `<type>/<JIRA-KEY>-<kebab-slug>` | `feat/CUE-42-drill-editor` |
 | Commit messages | Conventional Commits | `feat(api): add drill duplicate endpoint` |
-| PR titles | Conventional Commits plus Jira key | `feat(api): add drill duplicate endpoint (PROJ-42)` |
+| PR titles | Conventional Commits plus Jira key | `feat(api): add drill duplicate endpoint (CUE-42)` |
 | Doc files | `kebab-case.md` | `architecture.md` |
 
 Tool-mandated filenames keep their form: `README.md`, `CLAUDE.md`, `AGENTS.md`, `CONTRIBUTING.md`, `CODEOWNERS`, `docker-compose.yml`, `.env.example`.

@@ -2,7 +2,7 @@
 
 - **Status:** Proposed | Accepted | Superseded by NNNN
 - **Date:** YYYY-MM-DD
-- **Jira:** PROJ-123
+- **Jira:** CUE-123
 - **Deviates from:** <section of docs/architecture.md or README.md, if any>
 
 ## Context
