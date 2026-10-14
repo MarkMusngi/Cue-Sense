@@ -54,3 +54,7 @@ jobs:
       - uses: actions/dependency-review-action@v4
         with:
           fail-on-severity: high
+          # GHSA-vfj7-8cjw-p6xm: braces <= 3.0.3 has no patched release. It is a dev-only
+          # dependency (eslint-config-next -> fast-glob -> micromatch -> braces) that only
+          # globs this repo's own files at lint time. Remove this once braces is patched.
+          allow-ghsas: GHSA-vfj7-8cjw-p6xm
