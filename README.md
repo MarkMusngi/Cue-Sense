@@ -111,3 +111,13 @@ docker compose up
 ```
 
 Then follow `docs/architecture.md` for the roadmap and `docs/prompts.md` for the build order.
+
+### Running locally
+
+You need Docker Desktop (it includes Compose and runs Postgres for you). Node 20+ and pnpm (`corepack enable pnpm`) are only needed to run web checks outside Docker.
+
+1. `cp .env.example .env` and replace the placeholder password in both `POSTGRES_PASSWORD` and the two database URLs.
+2. `docker compose up --build`. The first run builds the images and creates the `cuesense` and `cuesense_test` databases.
+3. Open http://localhost:3000. The home page shows the API health. The API itself is at http://localhost:8000/health (interactive docs at http://localhost:8000/docs).
+
+Test, lint and migration commands are listed in `AGENTS.md` section 7.

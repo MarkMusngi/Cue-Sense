@@ -31,3 +31,8 @@ pgdata/
 Thumbs.db
 .idea/
 .vscode/
+
+# Build metadata
+*.tsbuildinfo
+next-env.d.ts
+*.egg-info/
