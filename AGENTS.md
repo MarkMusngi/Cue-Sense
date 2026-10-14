@@ -57,15 +57,15 @@ Do not change anything in the README's "Decisions: do not change" list. If you t
 - Work on **one ticket at a time**. Read its description and acceptance criteria first.
 - If the ticket is ambiguous or contradicts the docs, ask or comment. **Do not invent requirements.**
 - Include the issue key in the branch name and PR title (see section 6) so Jira links the work automatically.
-- Do **not** create, edit, re-prioritize, transition, or delete Jira issues unless the human explicitly asks. Status changes are handled by Jira automation on branch, PR, and merge events.
+- Agents may **read** Jira issues freely. They may **create or comment on** issues only when the human asks for that specific batch, after showing the plan and getting approval. They never edit existing issues, delete issues, or change priorities without explicit approval. Work only in project `CUE`. Status transitions are handled by Jira automation on branch, PR, and merge events.
 - When done, report which acceptance criteria are met, with evidence, and which are not.
 
 ## 6. Git workflow
 
 - **Never commit directly to `main`.** Work on a feature branch.
-- Branch name: `<type>/<PROJ-123>-<kebab-slug>`, for example `feat/PROJ-42-layout-validation`. Types: `feat`, `fix`, `chore`, `docs`, `test`, `refactor`, `ci`.
+- Branch name: `<type>/<CUE-123>-<kebab-slug>`, for example `feat/PROJ-42-layout-validation`. Types: `feat`, `fix`, `chore`, `docs`, `test`, `refactor`, `ci`.
 - Commits follow Conventional Commits: `feat(api): add layout validation service`.
-- PR title: `<type>(<scope>): <summary> (PROJ-123)`. CI (`pr-hygiene`) enforces this.
+- PR title: `<type>(<scope>): <summary> (CUE-123)`. CI (`pr-hygiene`) enforces this.
 - Small, focused commits. No unrelated refactors or dependency bumps in the same PR.
 - No force-pushes, no history rewrites on shared branches, no merging your own PR.
 - Fill in the PR template honestly.
