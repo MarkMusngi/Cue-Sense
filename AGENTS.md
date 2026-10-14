@@ -72,28 +72,34 @@ Do not change anything in the README's "Decisions: do not change" list. If you t
 
 ## 7. Commands
 
-This is the **single source of commands**; `CLAUDE.md` points here. Run from the repo root. Fill these in once Phase 0 exists; until then, say they are not available rather than guessing.
+This is the **single source of commands**; `CLAUDE.md` points here. Run from the repo root. If a command is marked not available, say so rather than guessing.
 
 ```bash
 # First-time setup
 cp .env.example .env                    # local only; never commit .env
 
-# Start the stack
-docker compose up -d                    # <confirm>
+corepack enable pnpm                    # only needed for web checks outside Docker
 
-# API
-<api test command>                      # e.g. docker compose exec api pytest
-<api lint / type-check command>         # e.g. ruff check . && mypy .
-<migration create command>              # e.g. docker compose exec api alembic revision --autogenerate -m "..."
-<migration apply command>               # e.g. docker compose exec api alembic upgrade head
+# Start the stack (web :3000, api :8000, postgres :5432)
+docker compose up -d --build
 
-# Web
-<web unit test command>
-<web lint / type-check command>         # e.g. pnpm --filter web lint && pnpm --filter web typecheck
-<web build command>
+# API (inside the api container; pytest only ever uses TEST_DATABASE_URL)
+docker compose exec api pytest
+docker compose exec api ruff check .
+docker compose exec api ruff format --check .
+docker compose exec api mypy app tests
+docker compose exec api alembic revision --autogenerate -m "..."
+docker compose exec api alembic upgrade head
+
+# Web (from the repo root)
+pnpm install
+pnpm --filter web lint
+pnpm --filter web typecheck
+pnpm --filter web build
+# Web unit tests: not available yet
 
 # End-to-end
-<playwright command>                    # e.g. pnpm exec playwright test
+# Playwright: not available yet (added with Prompt 7)
 ```
 
 ## 8. Testing
