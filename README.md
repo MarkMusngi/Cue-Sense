@@ -44,10 +44,10 @@ billiards/
 
 Changing any of these requires writing a short ADR in `docs/decisions/` first, because the rest of the system depends on them.
 
-1. **Table coordinates use diamond units.** `x` in `[0, 8]`, `y` in `[0, 4]`, origin at the top-left of the playing surface. Never store pixels.
+1. **Table coordinates use diamond units.** `x` in `[0, 8]`, `y` in `[0, 4]`, origin at the top-left of the playing surface. `x = 0` is the head rail, and `y = 0` is the long rail on your left when standing at the head rail facing the foot rail (ADR 0003). Never store pixels.
 2. **Drill versions are immutable.** Editing a drill creates a new `drill_versions` row. Past results always point at the version they were recorded against.
 3. **Individual attempts are recorded**, not just totals. Totals and rates are always derived by queries.
-4. **Every row is owner-scoped** with `owner_id`, even while there is only one user.
+4. **Every table except `users` has `owner_id`**, including join tables, even while there is only one user. `users` has none because it is the owner. Foreign keys between owned tables include `owner_id` (ADR 0001).
 5. **Layout validation lives in one backend service**, shared by the API and tests.
 6. **Layering:** routers (HTTP only) call services (business rules), which call SQLAlchemy models. Routers never contain business logic.
 7. **Data is snake_case end to end** (database, API JSON, layout JSON, TypeScript API types). There is no camelCase conversion layer.
@@ -59,8 +59,8 @@ Changing any of these requires writing a short ADR in `docs/decisions/` first, b
 - Visual design, colors, layout, component library choices.
 - Charting details (Recharts is a default, not a requirement).
 - Seed drills and tag names.
-- Additional scoring types (add to the `scoring.type` enum and the scoring service, with tests).
-- Additional annotation or target kinds in the layout schema (bump `schema_version` and add a migration).
+- Additional scoring kinds (add to the `scoring.kind` enum and the scoring service, bump the scoring `schema_version` and add an upgrade function, with tests; ADR 0002).
+- Additional annotation or target kinds in the layout schema (bump `schema_version` and add an upgrade function and fixture, not a data migration; ADR 0002).
 - Job queue technology in Phase 5 (start with a polled `analysis_jobs` table; Redis/RQ or Celery only if needed).
 - Hosting. The default is local Docker Compose.
 - Authentication method in Phase 3 (the plan uses a stubbed dev user until then).
@@ -71,11 +71,12 @@ Changing any of these requires writing a short ADR in `docs/decisions/` first, b
 |---|---|---|
 | Database tables | plural `snake_case` | `drill_versions` |
 | Database columns | `snake_case` | `created_at` |
-| Foreign keys | singular table name + `_id` | `drill_id`, `drill_run_id` |
+| Foreign keys | singular table name + `_id`; prefix a role when needed: `<role>_<singular table>_id`. References to `users` are always `owner_id` (ADR 0005) | `drill_id`, `current_drill_version_id`, `owner_id` |
 | Timestamps | `<verb>_at` | `created_at`, `started_at`, `ended_at` |
-| Booleans | `is_` or `has_` prefix | `is_archived`, `has_ball_in_hand` |
+| Booleans | `is_` or `has_` prefix. Prefer a timestamp or enum when the state has a time or more than two values | `is_default`, `has_time_limit` |
 | Enum values | lowercase `snake_case` strings | `success_count`, `top_left` |
 | JSON keys (API and layout) | `snake_case` | `object_balls`, `schema_version` |
+| JSON discriminator key | `kind` (never `type`) (ADR 0005) | `"kind": "pocket"`, `"kind": "success_count"` |
 | API paths | plural lowercase nouns, hyphen if multi-word | `/drills`, `/drill-runs` |
 | Element ids inside a layout | `<kind>_<n>` | `ball_1`, `target_1`, `annotation_1` |
 | Python files, functions, variables | `snake_case` | `drill_service.py` |
@@ -83,7 +84,7 @@ Changing any of these requires writing a short ADR in `docs/decisions/` first, b
 | TypeScript files and folders | `kebab-case` | `table-editor.tsx` |
 | React components, TS types | `PascalCase` | `TableEditor`, `DrillVersion` |
 | TS variables and functions | `camelCase` | `snapToGrid` |
-| TS properties that mirror API data | stay `snake_case` | `drill.current_version_id` |
+| TS properties that mirror API data | stay `snake_case` | `drill.current_drill_version_id` |
 | Test files | mirror the file under test | `test_drill_service.py`, `table-editor.test.tsx` |
 | Git branches | `kebab-case` with type prefix | `feat/drill-editor` |
 | Commit messages | Conventional Commits | `feat(api): add drill duplicate endpoint` |
