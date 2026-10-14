@@ -38,7 +38,7 @@ Naming rules have **no exceptions**. If unsure, follow the tables in `README.md`
 Examples (the README is authoritative):
 
 - JSON keys are `snake_case`. No camelCase keys, and no conversion layer in the web app. TypeScript properties that mirror API data stay `snake_case`.
-- Tables are plural `snake_case`; foreign keys are `<table>_id`; timestamps are `<verb>_at`; booleans are `is_` / `has_`.
+- Tables are plural `snake_case`; foreign keys are `<table>_id` or `<role>_<table>_id`, and references to `users` are `owner_id`; JSON discriminators are `kind`; timestamps are `<verb>_at`; booleans are `is_` / `has_`.
 - TypeScript files and folders are `kebab-case`; doc files are `kebab-case.md`.
 - Tool-mandated filenames keep their form: `README.md`, `CLAUDE.md`, `AGENTS.md`, `CONTRIBUTING.md`, `CODEOWNERS`, `docker-compose.yml`, `.env.example`.
 - Use the vocabulary table exactly: say "drill run" not "round", "attempt" not "shot" (reserved for video analysis).
@@ -48,7 +48,7 @@ Do not change anything in the README's "Decisions: do not change" list. If you t
 ## 4. Scope
 
 - **Phases 0 to 3 are in scope.** Computer vision and AI coaching are **not in scope until Phase 5**.
-- Do not scaffold them, stub them, or add dependencies for them: no OpenCV, worker code, LLM clients, or job queues. `apps/worker/` stays empty. Reserved columns and tables only (for example `attempts.observations`, a nullable column).
+- Do not scaffold them, stub them, or add dependencies for them: no OpenCV, worker code, LLM clients, or job queues. `apps/worker/` stays empty. Preparation is limited to the Phase 4+ table design in `docs/architecture.md` section 6, which is not created before Phase 4 (ADR 0004).
 - Build only what the assigned ticket asks for. No auth, no extra features, no speculative abstractions.
 - Respect phase order from the Jira backlog and the build order in `docs/prompts.md`.
 
@@ -125,11 +125,11 @@ pnpm --filter web build
 
 Summarized from the project docs. If this list and the docs differ, the docs win.
 
-- Table coordinates are diamond units (`x` in `[0, 8]`, `y` in `[0, 4]`, origin top-left). Never store pixels.
+- Table coordinates are diamond units (`x` in `[0, 8]`, `y` in `[0, 4]`, origin top-left, `x = 0` at the head rail). Never store pixels.
 - `drill_versions` are **immutable**: no update path in the service layer; unique `(drill_id, version_number)`.
 - Individual attempts are recorded; totals and rates are derived by queries.
 - Foreign keys **never cascade-delete history**. Drills with history are **archived, never hard-deleted**.
-- Every row has `owner_id` (README decision 4). Every resource is scoped to the current user via `get_current_user`.
+- Every table except `users` has `owner_id`, including join tables (README decision 4). Every resource is scoped to the current user via `get_current_user`.
 - Layering: routers (HTTP only) call services (business rules) call SQLAlchemy models. Layout validation is one pure-function service shared by API and tests.
 - One consistent error response shape.
 - Dashboard aggregation happens in SQL behind `/stats` endpoints, not in the browser.

@@ -101,10 +101,12 @@ drill_runs, attempts.
 
 Requirements:
 - Follow the naming conventions in README.md exactly (plural snake_case tables,
-  <table>_id foreign keys, <verb>_at timestamps, is_/has_ booleans).
+  <singular table>_id or <role>_<singular table>_id foreign keys, owner_id for
+  references to users, <verb>_at timestamps, is_/has_ booleans; ADR 0005).
 - drill_versions are immutable: no update path in the service layer;
   unique(drill_id, version_number).
-- attempts.observations is nullable JSONB, reserved for later.
+- Do not create attempts.observations; vision data goes in shot_observations
+  in Phase 4 (ADR 0004).
 - Add the listed indexes. Foreign keys must never cascade-delete history.
 - Seed script: one dev user and the five seed drills from section 4.9, each with
   a valid layout.

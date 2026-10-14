@@ -18,4 +18,8 @@ Short records of decisions that deviate from, or add to, `docs/architecture.md`.
 
 | ADR | Title | Status |
 |---|---|---|
-| | | |
+| [0001](0001-owner-id-on-every-table-except-users.md) | `owner_id` on every table except `users` | Proposed |
+| [0002](0002-json-schema-versions-upgraded-on-read.md) | Layout and scoring JSON upgraded on read | Proposed |
+| [0003](0003-head-rail-at-x-zero.md) | Head rail at `x = 0` | Proposed |
+| [0004](0004-drop-attempts-observations.md) | Drop `attempts.observations` | Proposed |
+| [0005](0005-role-foreign-keys-and-kind-discriminator.md) | Role-prefixed foreign keys and `kind` as the discriminator key | Proposed |

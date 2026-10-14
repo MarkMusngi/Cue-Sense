@@ -19,10 +19,10 @@ A billiards training app: drill maker, practice sessions, progress dashboard. Cu
 
 Changing any of these requires an ADR in `docs/decisions/` first.
 
-1. Table coordinates use diamond units: `x` in `[0, 8]`, `y` in `[0, 4]`, origin top-left. Never store pixels.
+1. Table coordinates use diamond units: `x` in `[0, 8]`, `y` in `[0, 4]`, origin top-left. `x = 0` is the head rail; `y = 0` is the long rail on your left facing the foot rail. Never store pixels.
 2. Drill versions are immutable. Editing a drill creates a new `drill_versions` row.
 3. Individual attempts are recorded. Totals and rates are derived by queries.
-4. Every row has `owner_id`, even with one user.
+4. Every table except `users` has `owner_id`, including join tables, even with one user. `users` is the owner. Foreign keys between owned tables include `owner_id`.
 5. Layout validation lives in one backend service, shared by API and tests.
 6. Layering: routers (HTTP only) call services (business rules) call SQLAlchemy models. No business logic in routers.
 7. snake_case end to end (database, API JSON, layout JSON, TypeScript API types). No camelCase conversion layer.
@@ -37,11 +37,12 @@ Changing any of these requires an ADR in `docs/decisions/` first.
 |---|---|---|
 | Database tables | plural `snake_case` | `drill_versions` |
 | Database columns | `snake_case` | `created_at` |
-| Foreign keys | singular table name + `_id` | `drill_id`, `drill_run_id` |
+| Foreign keys | `<singular table>_id`, or `<role>_<singular table>_id`; references to `users` are always `owner_id` | `drill_id`, `current_drill_version_id`, `owner_id` |
 | Timestamps | `<verb>_at` | `created_at`, `started_at` |
-| Booleans | `is_` or `has_` prefix | `is_archived` |
+| Booleans | `is_` or `has_` prefix; prefer a timestamp or enum when the state has a time or more than two values | `is_default` |
 | Enum values | lowercase `snake_case` strings | `success_count` |
 | JSON keys (API and layout) | `snake_case` | `object_balls` |
+| JSON discriminator key | `kind` (never `type`) | `"kind": "pocket"` |
 | API paths | plural lowercase nouns, hyphenated | `/drill-runs` |
 | Element ids inside a layout | `<kind>_<n>` | `ball_1`, `target_1` |
 | Python files, functions, variables | `snake_case` | `drill_service.py` |
@@ -49,11 +50,11 @@ Changing any of these requires an ADR in `docs/decisions/` first.
 | TypeScript files and folders | `kebab-case` | `table-editor.tsx` |
 | React components, TS types | `PascalCase` | `TableEditor` |
 | TS variables and functions | `camelCase` | `snapToGrid` |
-| TS properties mirroring API data | stay `snake_case` | `drill.current_version_id` |
+| TS properties mirroring API data | stay `snake_case` | `drill.current_drill_version_id` |
 | Test files | mirror the file under test | `test_drill_service.py` |
-| Git branches | `<type>/<JIRA-KEY>-<kebab-slug>` | `feat/PROJ-42-drill-editor` |
+| Git branches | `<type>/<JIRA-KEY>-<kebab-slug>` | `feat/CUE-42-drill-editor` |
 | Commit messages | Conventional Commits | `feat(api): add drill duplicate endpoint` |
-| PR titles | Conventional Commits plus Jira key | `feat(api): add drill duplicate endpoint (PROJ-42)` |
+| PR titles | Conventional Commits plus Jira key | `feat(api): add drill duplicate endpoint (CUE-42)` |
 | Doc files | `kebab-case.md` | `architecture.md` |
 
 Tool-mandated filenames keep their form: `README.md`, `CLAUDE.md`, `AGENTS.md`, `CONTRIBUTING.md`, `CODEOWNERS`, `docker-compose.yml`, `.env.example`.
