@@ -1,0 +1,44 @@
+name: PR Hygiene
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+
+permissions:
+  contents: read
+
+jobs:
+  pr-hygiene:
+    name: pr-hygiene
+    runs-on: ubuntu-latest
+    # Dependabot branches have no Jira key; skip them.
+    if: github.actor != 'dependabot[bot]'
+    steps:
+      - name: Check PR title and branch name
+        env:
+          # Passed via env, never interpolated into the script, to avoid injection.
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          BRANCH: ${{ github.head_ref }}
+        run: |
+          set -uo pipefail
+          fail=0
+
+          cc_re='^(feat|fix|docs|chore|refactor|test|ci|build|perf|style|revert)(\([a-z0-9._-]+\))?!?: .+'
+          jira_re='[A-Z][A-Z0-9]+-[0-9]+'
+
+          if ! [[ "$PR_TITLE" =~ $cc_re ]]; then
+            echo "::error::PR title must follow Conventional Commits, e.g. 'feat(api): add drill CRUD (PROJ-12)'. Got: $PR_TITLE"
+            fail=1
+          fi
+
+          if ! [[ "$PR_TITLE" =~ $jira_re || "$BRANCH" =~ $jira_re ]]; then
+            echo "::error::Include a Jira issue key (e.g. PROJ-12) in the PR title or branch name so Jira links this work."
+            fail=1
+          fi
+
+          if [[ "$BRANCH" == "main" ]]; then
+            echo "::error::PRs must come from a feature branch, not main."
+            fail=1
+          fi
+
+          exit $fail

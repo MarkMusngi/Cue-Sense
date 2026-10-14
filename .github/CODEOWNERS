@@ -1,0 +1,14 @@
+# Replace @your-github-username with your handle (or a team, e.g. @org/maintainers).
+# Pair this with the "Require review from Code Owners" ruleset option.
+
+*                           @your-github-username
+
+# Sensitive paths: always require an owner review
+/.github/                   @your-github-username
+/AGENTS.md                  @your-github-username
+/CLAUDE.md                  @your-github-username
+/docker-compose.yml         @your-github-username
+/apps/api/alembic/          @your-github-username
+/docs/architecture.md       @your-github-username
+/docs/decisions/            @your-github-username
+/README.md                  @your-github-username
