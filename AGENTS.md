@@ -2,7 +2,7 @@
 
 Instructions for coding agents (Claude Code and others) working in this repository. Read this file fully before changing anything. If it conflicts with a direct instruction from the human you are working for, follow the human and flag the conflict.
 
-> **Maintainers:** replace `PROJ` with your Jira project key everywhere, and fill in the `<placeholders>` in section 7 after the Phase 0 scaffold exists.
+> **Maintainers:** fill in the `<placeholders>` in section 7 after the Phase 0 scaffold exists.
 
 ---
 
@@ -63,7 +63,7 @@ Do not change anything in the README's "Decisions: do not change" list. If you t
 ## 6. Git workflow
 
 - **Never commit directly to `main`.** Work on a feature branch.
-- Branch name: `<type>/<CUE-123>-<kebab-slug>`, for example `feat/PROJ-42-layout-validation`. Types: `feat`, `fix`, `chore`, `docs`, `test`, `refactor`, `ci`.
+- Branch name: `<type>/<CUE-123>-<kebab-slug>`, for example `feat/CUE-42-layout-validation`. Types: `feat`, `fix`, `chore`, `docs`, `test`, `refactor`, `ci`.
 - Commits follow Conventional Commits: `feat(api): add layout validation service`.
 - PR title: `<type>(<scope>): <summary> (CUE-123)`. CI (`pr-hygiene`) enforces this.
 - Small, focused commits. No unrelated refactors or dependency bumps in the same PR.

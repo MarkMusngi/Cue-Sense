@@ -27,12 +27,12 @@ jobs:
           jira_re='[A-Z][A-Z0-9]+-[0-9]+'
 
           if ! [[ "$PR_TITLE" =~ $cc_re ]]; then
-            echo "::error::PR title must follow Conventional Commits, e.g. 'feat(api): add drill CRUD (PROJ-12)'. Got: $PR_TITLE"
+            echo "::error::PR title must follow Conventional Commits, e.g. 'feat(api): add drill CRUD (CUE-12)'. Got: $PR_TITLE"
             fail=1
           fi
 
           if ! [[ "$PR_TITLE" =~ $jira_re || "$BRANCH" =~ $jira_re ]]; then
-            echo "::error::Include a Jira issue key (e.g. PROJ-12) in the PR title or branch name so Jira links this work."
+            echo "::error::Include a Jira issue key (e.g. CUE-12) in the PR title or branch name so Jira links this work."
             fail=1
           fi
 

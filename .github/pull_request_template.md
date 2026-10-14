@@ -1,6 +1,6 @@
 ## Jira ticket
 
-<!-- e.g. PROJ-123. The key must also be in the branch name or PR title. -->
+<!-- e.g. CUE-123. The key must also be in the branch name or PR title. -->
 
 ## What changed and why
 
@@ -33,7 +33,7 @@
 
 ## Checklist
 
-- [ ] Branch is not `main`; PR title follows `type(scope): summary (PROJ-123)`
+- [ ] Branch is not `main`; PR title follows `type(scope): summary (CUE-123)`
 - [ ] Naming follows `README.md` (snake_case JSON, table and column rules, no exceptions)
 - [ ] No credentials, `.env` files, or production data committed
 - [ ] New settings added to `.env.example` (placeholders only)

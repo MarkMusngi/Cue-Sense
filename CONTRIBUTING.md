@@ -9,11 +9,11 @@ This guide is for humans. Coding agents should also read [`AGENTS.md`](AGENTS.md
 
 ## Workflow
 
-1. Branch from an up-to-date `main`: `git switch -c feat/PROJ-123-short-slug`
+1. Branch from an up-to-date `main`: `git switch -c feat/CUE-123-short-slug`
 2. Make small commits using [Conventional Commits](https://www.conventionalcommits.org/): `feat(api): add layout validation service`
 3. Write tests alongside the change. Bug fixes need a regression test.
 4. Run lint, type-check, tests, and build locally (commands are in `AGENTS.md` section 7).
-5. Open a PR titled `type(scope): summary (PROJ-123)` and fill in the template honestly.
+5. Open a PR titled `type(scope): summary (CUE-123)` and fill in the template honestly.
 6. Wait for CI and a review. Do not merge with failing checks.
 
 ## Rules that matter most
