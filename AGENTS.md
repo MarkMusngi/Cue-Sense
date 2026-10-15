@@ -97,7 +97,7 @@ pnpm install
 pnpm --filter web lint
 pnpm --filter web typecheck
 pnpm --filter web build
-# Web unit tests: not available yet
+pnpm --filter web test                  # Vitest unit tests (lib/**/*.test.ts)
 
 # End-to-end
 # Playwright: not available yet (added with Prompt 7)
