@@ -62,6 +62,29 @@ The pure helpers in `lib/table-geometry.ts` have unit tests in `lib/table-geomet
 - **Vertical mirror:** `y → 4 − y`, and pocket names swap top and bottom.
 - **Both mirrors** keep ids and are their own inverse.
 
+## As built
+
+- **Tools:**
+  - **Select** picks and drags balls, zones and annotations.
+  - **Add ball** places balls and stays on, so you can place several; Escape goes back to Select.
+  - **Pocket target** picks the pocket nearest the click. It links the selected object ball, if one is selected.
+  - **Circle zone, Rect zone and Text** place one element, then switch back to Select.
+  - **Arrow and Line** add a point per click. Click the last point again or press Enter to finish; Escape cancels.
+- **Which tool grabs what:** balls can be grabbed only with Select or Add ball, so an aim line can start on the cue ball. Targets and annotations can be picked only with Select, so a click on a zone with another tool places on top of the zone.
+- **Actions:**
+  - Snap, Undo, Redo, Reset and Delete.
+  - Mirror H and Mirror V, both undoable.
+  - Keyboard: Delete or Backspace, Escape, Ctrl/Cmd+Z, Ctrl/Cmd+Shift+Z and Ctrl+Y.
+- **Inspector row:** a fixed-height row under the toolbar. It shows drawing help while a path is being drawn, a target's ball and a zone's label, or an annotation's label or text. Its height never changes, so the table never moves under the pointer.
+- **Removing a ball:** targets that named it keep their place but lose the link. A pocket target then means any ball.
+- **Text:** a new text note opens with its text box focused and "Note" selected. The pointerdown's default is prevented so the browser does not move focus back to the table.
+- **Touch:**
+  - `touch-action: none` on the editable table.
+  - Larger invisible hit areas for balls (1.6 × radius), handles and path points.
+  - One pointer at a time; a lost pointer capture cancels the drag.
+  - At phone width a ball is about 3.5 px in radius, so even the enlarged hit area is far below a 44 px touch target. Editing works best in landscape or on a tablet.
+- **Dev preview:** `/dev/table-editor` shows the editor, a read-only thumbnail and the live layout JSON.
+
 ## Not yet
 
 - **Generated types:** the layout types could be generated from the Pydantic models' JSON Schema to prevent drift.
