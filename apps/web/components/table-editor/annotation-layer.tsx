@@ -6,6 +6,7 @@ const STROKE = "#f8fafc";
 const SELECTED = "#38bdf8";
 const STROKE_WIDTH = 0.03;
 const HANDLE_RADIUS = 0.06;
+const HANDLE_HIT_RADIUS = 0.16;
 const TEXT_SIZE = 0.16;
 const LABEL_SIZE = 0.13;
 // Dark halo behind white text so it reads on felt and on zones.
@@ -150,18 +151,23 @@ function AnnotationShape({ annotation, isSelected, markers, onPointerDown }: Ann
       {isSelected &&
         onPointerDown &&
         annotation.points.map((p, index) => (
-          <circle
+          <g
             key={index}
-            cx={p.x}
-            cy={p.y}
-            r={HANDLE_RADIUS}
-            fill={SELECTED}
-            stroke="#0c4a6e"
-            strokeWidth={0.015}
             className="cursor-crosshair"
             data-testid={`point-${annotation.id}-${index}`}
             onPointerDown={(event) => onPointerDown(event, { kind: "point", index })}
-          />
+          >
+            {/* An invisible larger circle, so a fingertip can grab the point. */}
+            <circle cx={p.x} cy={p.y} r={HANDLE_HIT_RADIUS} fill="transparent" />
+            <circle
+              cx={p.x}
+              cy={p.y}
+              r={HANDLE_RADIUS}
+              fill={SELECTED}
+              stroke="#0c4a6e"
+              strokeWidth={0.015}
+            />
+          </g>
         ))}
     </g>
   );

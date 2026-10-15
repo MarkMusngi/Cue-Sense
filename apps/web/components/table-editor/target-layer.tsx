@@ -7,6 +7,7 @@ const ZONE_FILL = "rgba(251, 191, 36, 0.22)";
 const TARGET_STROKE = "#fbbf24";
 const SELECTED = "#38bdf8";
 const HANDLE_SIZE = 0.12;
+const HANDLE_HIT_SIZE = 0.32;
 const LABEL_SIZE = 0.14;
 
 export type TargetPart = "body" | "handle";
@@ -132,18 +133,29 @@ function TargetShape({ target, ballLabel, ringIndex, isSelected, onPointerDown }
         </text>
       )}
       {isSelected && onPointerDown && (
-        <rect
-          x={handle.x - HANDLE_SIZE / 2}
-          y={handle.y - HANDLE_SIZE / 2}
-          width={HANDLE_SIZE}
-          height={HANDLE_SIZE}
-          fill={SELECTED}
-          stroke="#0c4a6e"
-          strokeWidth={0.015}
+        <g
           className="cursor-nwse-resize"
           data-testid={`resize-${target.id}`}
           onPointerDown={(event) => onPointerDown(event, "handle")}
-        />
+        >
+          {/* An invisible larger square, so a fingertip can grab the handle. */}
+          <rect
+            x={handle.x - HANDLE_HIT_SIZE / 2}
+            y={handle.y - HANDLE_HIT_SIZE / 2}
+            width={HANDLE_HIT_SIZE}
+            height={HANDLE_HIT_SIZE}
+            fill="transparent"
+          />
+          <rect
+            x={handle.x - HANDLE_SIZE / 2}
+            y={handle.y - HANDLE_SIZE / 2}
+            width={HANDLE_SIZE}
+            height={HANDLE_SIZE}
+            fill={SELECTED}
+            stroke="#0c4a6e"
+            strokeWidth={0.015}
+          />
+        </g>
       )}
     </g>
   );

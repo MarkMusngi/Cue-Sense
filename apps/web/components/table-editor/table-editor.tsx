@@ -149,8 +149,17 @@ export function TableEditor({ layout, onChange, readOnly = false }: TableEditorP
     index = 0,
   ) {
     event.stopPropagation();
+    // One pointer at a time: a second finger does not start another drag.
+    if (drag) {
+      return;
+    }
     focusTable();
-    svgRef.current?.setPointerCapture(event.pointerId);
+    try {
+      // Keep receiving moves when the pointer leaves the table mid-drag.
+      svgRef.current?.setPointerCapture(event.pointerId);
+    } catch {
+      // The pointer is already gone; pointerup or cancel ends the drag anyway.
+    }
     const pointer = toTablePoint(event);
     setSelectedId(id);
     setDrag({
@@ -204,6 +213,9 @@ export function TableEditor({ layout, onChange, readOnly = false }: TableEditorP
   }
 
   function handleTablePointerDown(event: PointerEvent<SVGSVGElement>) {
+    if (drag || !isPrimary(event)) {
+      return;
+    }
     focusTable();
     const point = toTablePoint(event);
     switch (tool) {
@@ -457,6 +469,8 @@ export function TableEditor({ layout, onChange, readOnly = false }: TableEditorP
       tabIndex={readOnly ? undefined : 0}
       data-testid="table-editor"
       data-readonly={readOnly}
+      // Touch drags move balls instead of scrolling the page.
+      style={readOnly ? undefined : { touchAction: "none" }}
       className={[
         "block h-auto w-full select-none rounded-lg outline-none",
         readOnly ? "" : "focus-visible:ring-2 focus-visible:ring-sky-500",
@@ -466,6 +480,7 @@ export function TableEditor({ layout, onChange, readOnly = false }: TableEditorP
       onPointerMove={readOnly ? undefined : handlePointerMove}
       onPointerUp={readOnly ? undefined : handlePointerUp}
       onPointerCancel={readOnly ? undefined : handlePointerCancel}
+      onLostPointerCapture={readOnly ? undefined : handlePointerCancel}
       onKeyDown={readOnly ? undefined : handleKeyDown}
     >
       <TableSurface />

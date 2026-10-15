@@ -106,6 +106,10 @@ function Ball({ ball, radius, clipId, isSelected, onPointerDown }: BallProps) {
           </text>
         </>
       )}
+      {onPointerDown && (
+        // An invisible ring around the ball, so a fingertip can grab it.
+        <circle cx={ball.x} cy={ball.y} r={radius * 1.6} fill="transparent" />
+      )}
       {isSelected && (
         <circle
           cx={ball.x}
