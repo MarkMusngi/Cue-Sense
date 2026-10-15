@@ -1,6 +1,6 @@
 # 0006: 9 ft table only
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-10-15
 - **Jira:** CUE-8
 - **Deviates from:** `docs/architecture.md` §4.2 (`table.size_ft` is 7, 8 or 9) and §5 ("7 ft vs 9 ft" validation tests); `AGENTS.md` §8 (the same test case)
