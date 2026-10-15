@@ -108,8 +108,9 @@ Requirements:
 - Do not create attempts.observations; vision data goes in shot_observations
   in Phase 4 (ADR 0004).
 - Add the listed indexes. Foreign keys must never cascade-delete history.
-- Seed script: one dev user and the five seed drills from section 4.9, each with
-  a valid layout.
+- Seed script: one dev user. The five seed drills from section 4.9 are added
+  after the layout validation service (Prompt 4), so their layouts can be
+  validated.
 
 Plan first (models, constraints, indexes), then implement with pytest tests for
 the constraints and the seed script.
@@ -132,6 +133,10 @@ Write thorough pytest tests first, including: a ball exactly touching a cushion,
 two balls exactly touching, and table sizes other than 9 ft rejected (ADR 0006).
 Do not build endpoints yet.
 ```
+
+Then add the five seed drills from section 4.9 to the seed script: one drill and
+version 1 each, owned by the dev user, with a layout that passes the validator,
+a section 4.4 scoring JSON, and idempotent reruns (matched on slug).
 
 ## Prompt 5: Drill CRUD API (Sonnet 5.5)
 
