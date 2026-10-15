@@ -5,6 +5,7 @@ import {
   ballsOverlap,
   canMirrorHorizontal,
   clampToCushions,
+  clampToTable,
   mirrorHorizontal,
   mirrorVertical,
   placeBall,
@@ -13,6 +14,14 @@ import {
   snapToGrid,
 } from "@/lib/table-geometry";
 import { sampleLayout } from "@/lib/sample-layouts";
+
+describe("clampToTable", () => {
+  it("keeps a point on the playing surface", () => {
+    expect(clampToTable({ x: -0.3, y: 4.2 })).toEqual({ x: 0, y: 4 });
+    expect(clampToTable({ x: 8.4, y: -1 })).toEqual({ x: 8, y: 0 });
+    expect(clampToTable({ x: 3.3, y: 1.1 })).toEqual({ x: 3.3, y: 1.1 });
+  });
+});
 
 const R = 0.09;
 

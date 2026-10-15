@@ -42,6 +42,11 @@ export function clampToCushions(point: Point, radius: number): Point {
   };
 }
 
+/** Keep a point (zone centre, annotation point) on the playing surface. */
+export function clampToTable(point: Point): Point {
+  return clampToCushions(point, 0);
+}
+
 function insideCushions(point: Point, radius: number): boolean {
   const slack = POSITION_TOLERANCE + FLOAT_EPSILON;
   return (

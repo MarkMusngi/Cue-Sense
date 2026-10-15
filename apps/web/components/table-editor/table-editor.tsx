@@ -2,12 +2,27 @@
 
 import { useRef, useState, type KeyboardEvent, type PointerEvent } from "react";
 
+import {
+  AnnotationLayer,
+  type AnnotationPart,
+  type PendingPath,
+} from "@/components/table-editor/annotation-layer";
 import { BallLayer } from "@/components/table-editor/ball-layer";
 import { EditorToolbar, type EditorTool } from "@/components/table-editor/editor-toolbar";
+import { InspectorRow } from "@/components/table-editor/inspector-row";
 import { TABLE_VIEW_BOX, TableSurface } from "@/components/table-editor/table-surface";
-import { TargetInspector } from "@/components/table-editor/target-inspector";
 import { TargetLayer, type TargetPart } from "@/components/table-editor/target-layer";
 import { useLayoutHistory } from "@/components/table-editor/use-layout-history";
+import {
+  addPathAnnotation,
+  addTextAnnotation,
+  canAddAnnotation,
+  findAnnotation,
+  moveAnnotation,
+  moveAnnotationPoint,
+  removeAnnotation,
+  setAnnotationText,
+} from "@/lib/annotation-edits";
 import { CUE_BALL_ID, MAX_OBJECT_BALLS, type Layout, type Point } from "@/lib/layout";
 import {
   addObjectBall,
@@ -20,6 +35,7 @@ import {
   ballRadius,
   ballsOverlap,
   clampToCushions,
+  clampToTable,
   placeBall,
   snapToGrid,
 } from "@/lib/table-geometry";
@@ -49,14 +65,22 @@ export type TableEditorProps = {
 
 type Drag = {
   pointerId: number;
-  // A ball or zone moves; a zone handle resizes.
-  kind: "ball" | "zone" | "resize";
+  // Balls, zones and annotations move; a zone handle resizes; a path point moves alone.
+  kind: "ball" | "zone" | "resize" | "annotation" | "point";
   id: string;
+  // The point index, for kind "point".
+  index: number;
   // Element anchor minus pointer, so the element does not jump under the pointer.
   offset: Point;
+  // Pointer and layout when the drag started; annotations move relative to them.
+  origin: Point;
+  base: Layout;
   // The layout as the drag shows it; committed once on pointer up.
   draft: Layout;
 };
+
+// Clicking within this distance of the last point (diamonds) finishes a path.
+const FINISH_DISTANCE = 0.08;
 
 /**
  * SVG table layout editor in diamond units (docs/architecture.md section 4.8).
@@ -68,16 +92,21 @@ export function TableEditor({ layout, onChange, readOnly = false }: TableEditorP
   const [tool, setTool] = useState<EditorTool>("select");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [drag, setDrag] = useState<Drag | null>(null);
+  const [pending, setPending] = useState<PendingPath | null>(null);
   // Snap toggle arrives with the toolbar (build step 6); on by default.
   const isSnapping = true;
 
   const present = history.present;
   const shown = drag?.draft ?? present;
   const radius = ballRadius(shown.table.size_ft);
-  const selectedTarget = selectedId ? findTarget(present, selectedId) : undefined;
   const selectedBall = selectedId ? findBall(present, selectedId) : undefined;
+  const selectedTarget = selectedId ? findTarget(present, selectedId) : undefined;
+  const selectedAnnotation = selectedId ? findAnnotation(present, selectedId) : undefined;
   const canAddBall = present.object_balls.length < MAX_OBJECT_BALLS;
-  const canDelete = selectedTarget !== undefined || (selectedBall !== undefined && selectedId !== CUE_BALL_ID);
+  const canDelete =
+    selectedTarget !== undefined ||
+    selectedAnnotation !== undefined ||
+    (selectedBall !== undefined && selectedId !== CUE_BALL_ID);
 
   function toTablePoint(event: PointerEvent): Point {
     const matrix = svgRef.current?.getScreenCTM();
@@ -96,7 +125,17 @@ export function TableEditor({ layout, onChange, readOnly = false }: TableEditorP
     svgRef.current?.focus({ preventScroll: true });
   }
 
-  function startDrag(event: PointerEvent, kind: Drag["kind"], id: string, anchor: Point) {
+  function isPrimary(event: PointerEvent): boolean {
+    return event.pointerType !== "mouse" || event.button === 0;
+  }
+
+  function startDrag(
+    event: PointerEvent,
+    kind: Drag["kind"],
+    id: string,
+    anchor: Point,
+    index = 0,
+  ) {
     event.stopPropagation();
     focusTable();
     svgRef.current?.setPointerCapture(event.pointerId);
@@ -106,13 +145,12 @@ export function TableEditor({ layout, onChange, readOnly = false }: TableEditorP
       pointerId: event.pointerId,
       kind,
       id,
+      index,
       offset: { x: anchor.x - pointer.x, y: anchor.y - pointer.y },
+      origin: pointer,
+      base: present,
       draft: present,
     });
-  }
-
-  function isPrimary(event: PointerEvent): boolean {
-    return event.pointerType !== "mouse" || event.button === 0;
   }
 
   function handleBallPointerDown(event: PointerEvent<SVGGElement>, ballId: string) {
@@ -138,29 +176,85 @@ export function TableEditor({ layout, onChange, readOnly = false }: TableEditorP
     }
   }
 
-  function handleTablePointerDown(event: PointerEvent<SVGSVGElement>) {
-    focusTable();
-    const point = toTablePoint(event);
-    if (tool === "ball") {
-      addBallAt(point);
-    } else if (tool === "pocket_target") {
-      const pocket = nearestPocket(point);
-      if (pocket) {
-        const linked = selectedBall && selectedId !== CUE_BALL_ID ? selectedId ?? undefined : undefined;
-        commitAndSelectLastTarget(addPocketTarget(present, pocket, linked));
-      }
-    } else if (tool === "circle_zone" || tool === "rect_zone") {
-      commitAndSelectLastTarget(addZone(present, tool === "circle_zone" ? "circle" : "rect", snap(point)));
+  function handleAnnotationPointerDown(
+    event: PointerEvent<SVGElement>,
+    id: string,
+    part: AnnotationPart,
+  ) {
+    if (!isPrimary(event)) {
+      return;
+    }
+    if (part.kind === "point") {
+      startDrag(event, "point", id, { x: 0, y: 0 }, part.index);
     } else {
-      setSelectedId(null);
+      startDrag(event, "annotation", id, { x: 0, y: 0 });
     }
   }
 
-  function commitAndSelectLastTarget(next: Layout) {
+  function handleTablePointerDown(event: PointerEvent<SVGSVGElement>) {
+    focusTable();
+    const point = toTablePoint(event);
+    switch (tool) {
+      case "ball":
+        addBallAt(point);
+        break;
+      case "pocket_target": {
+        const pocket = nearestPocket(point);
+        if (pocket) {
+          const linked = selectedBall && selectedId !== CUE_BALL_ID ? selectedBall.id : undefined;
+          commitNew(addPocketTarget(present, pocket, linked), "target");
+        }
+        break;
+      }
+      case "circle_zone":
+      case "rect_zone":
+        commitNew(addZone(present, tool === "circle_zone" ? "circle" : "rect", snap(point)), "target");
+        break;
+      case "arrow":
+      case "line":
+        addPathPoint(tool, clampToTable(snap(point)));
+        break;
+      case "text":
+        // Keep the browser from moving focus back to the table after this pointerdown,
+        // so the new note's text box keeps focus and typing replaces "Note".
+        event.preventDefault();
+        commitNew(addTextAnnotation(present, snap(point)), "annotation");
+        break;
+      default:
+        setSelectedId(null);
+    }
+  }
+
+  /** Commit a layout that gained one target or annotation, select it, and go back to Select. */
+  function commitNew(next: Layout, kind: "target" | "annotation") {
+    if (next === present) {
+      return;
+    }
     history.commit(next);
-    setSelectedId(next.targets[next.targets.length - 1].id);
-    // Targets are placed one at a time; go back to selecting so the new one can be adjusted.
+    const list = kind === "target" ? next.targets : next.annotations;
+    setSelectedId(list[list.length - 1].id);
     setTool("select");
+  }
+
+  function addPathPoint(kind: "arrow" | "line", point: Point) {
+    if (!pending) {
+      setSelectedId(null);
+      setPending({ kind, points: [point], hover: null });
+      return;
+    }
+    const last = pending.points[pending.points.length - 1];
+    if (Math.hypot(point.x - last.x, point.y - last.y) < FINISH_DISTANCE) {
+      finishPath();
+    } else {
+      setPending({ ...pending, points: [...pending.points, point] });
+    }
+  }
+
+  function finishPath() {
+    if (pending && pending.points.length >= 2) {
+      commitNew(addPathAnnotation(present, pending.kind, pending.points), "annotation");
+    }
+    setPending(null);
   }
 
   function addBallAt(point: Point) {
@@ -184,33 +278,60 @@ export function TableEditor({ layout, onChange, readOnly = false }: TableEditorP
     if (!canDelete || !selectedId) {
       return;
     }
-    history.commit(selectedTarget ? removeTarget(present, selectedId) : removeBall(present, selectedId));
+    history.commit(
+      selectedTarget
+        ? removeTarget(present, selectedId)
+        : selectedAnnotation
+          ? removeAnnotation(present, selectedId)
+          : removeBall(present, selectedId),
+    );
     setSelectedId(null);
   }
 
+  function changeTool(next: EditorTool) {
+    setPending(null);
+    setTool(next);
+    focusTable();
+  }
+
   function handlePointerMove(event: PointerEvent<SVGSVGElement>) {
+    if (pending) {
+      // Clamped like the saved points, so the preview matches the result.
+      setPending({ ...pending, hover: clampToTable(snap(toTablePoint(event))) });
+      return;
+    }
     if (!drag || event.pointerId !== drag.pointerId) {
       return;
     }
     const pointer = toTablePoint(event);
-    const moved = { x: pointer.x + drag.offset.x, y: pointer.y + drag.offset.y };
-    let draft = drag.draft;
-    if (drag.kind === "ball") {
-      const current = findBall(draft, drag.id);
-      if (!current) {
-        return;
+    setDrag({ ...drag, draft: dragDraft(drag, pointer) });
+  }
+
+  function dragDraft(current: Drag, pointer: Point): Layout {
+    const moved = { x: pointer.x + current.offset.x, y: pointer.y + current.offset.y };
+    switch (current.kind) {
+      case "ball": {
+        const ball = findBall(current.draft, current.id);
+        if (!ball) {
+          return current.draft;
+        }
+        const placed = placeBall(moved, otherBallPositions(current.draft, current.id), radius, {
+          isSnapping,
+          fallback: { x: ball.x, y: ball.y },
+        });
+        return moveBall(current.draft, current.id, placed);
       }
-      const placed = placeBall(moved, otherBallPositions(draft, drag.id), radius, {
-        isSnapping,
-        fallback: { x: current.x, y: current.y },
-      });
-      draft = moveBall(draft, drag.id, placed);
-    } else if (drag.kind === "zone") {
-      draft = moveZone(draft, drag.id, snap(moved));
-    } else {
-      draft = resizeZone(draft, drag.id, snap(pointer));
+      case "zone":
+        return moveZone(current.draft, current.id, snap(moved));
+      case "resize":
+        return resizeZone(current.draft, current.id, snap(pointer));
+      case "annotation": {
+        const offset = snap({ x: pointer.x - current.origin.x, y: pointer.y - current.origin.y });
+        return moveAnnotation(current.base, current.id, offset);
+      }
+      case "point":
+        return moveAnnotationPoint(current.draft, current.id, current.index, snap(pointer));
     }
-    setDrag({ ...drag, draft });
   }
 
   function handlePointerUp(event: PointerEvent<SVGSVGElement>) {
@@ -229,15 +350,24 @@ export function TableEditor({ layout, onChange, readOnly = false }: TableEditorP
   }
 
   function handleKeyDown(event: KeyboardEvent<SVGSVGElement>) {
-    if (event.key === "Delete" || event.key === "Backspace") {
+    if (event.key === "Enter" && pending) {
+      event.preventDefault();
+      finishPath();
+    } else if (event.key === "Delete" || event.key === "Backspace") {
       event.preventDefault();
       deleteSelected();
     } else if (event.key === "Escape") {
-      setTool("select");
-      setSelectedId(null);
+      if (pending) {
+        setPending(null);
+      } else {
+        setTool("select");
+        setSelectedId(null);
+      }
     }
   }
 
+  // Only the select tool picks targets and annotations; other tools place things on top.
+  const isPicking = !readOnly && tool === "select";
   const table = (
     <svg
       ref={svgRef}
@@ -263,14 +393,22 @@ export function TableEditor({ layout, onChange, readOnly = false }: TableEditorP
       <TargetLayer
         layout={shown}
         selectedId={readOnly ? null : selectedId}
-        // Only the select tool picks targets; other tools place things on top of zones.
-        onTargetPointerDown={readOnly || tool !== "select" ? undefined : handleTargetPointerDown}
+        onTargetPointerDown={isPicking ? handleTargetPointerDown : undefined}
+      />
+      <AnnotationLayer
+        layout={shown}
+        selectedId={readOnly ? null : selectedId}
+        pending={readOnly ? null : pending}
+        onAnnotationPointerDown={isPicking ? handleAnnotationPointerDown : undefined}
       />
       <BallLayer
         layout={shown}
         radius={radius}
         selectedId={readOnly ? null : selectedId}
-        onBallPointerDown={readOnly ? undefined : handleBallPointerDown}
+        // Other tools draw over balls, for example an aim line from the cue ball.
+        onBallPointerDown={
+          !readOnly && (tool === "select" || tool === "ball") ? handleBallPointerDown : undefined
+        }
       />
     </svg>
   );
@@ -282,29 +420,29 @@ export function TableEditor({ layout, onChange, readOnly = false }: TableEditorP
     <div className="flex flex-col gap-2">
       <EditorToolbar
         tool={tool}
-        onToolChange={(next) => {
-          setTool(next);
-          focusTable();
-        }}
+        onToolChange={changeTool}
         canAddBall={canAddBall}
+        canAddAnnotation={canAddAnnotation(present)}
         canDelete={canDelete}
         onDelete={deleteSelected}
       />
-      {/* A fixed-height row, so selecting a target never moves the table under the pointer. */}
-      <div className="flex min-h-9 items-center">
-        {selectedTarget && selectedId ? (
-          <TargetInspector
-            layout={present}
-            target={selectedTarget}
-            onBallChange={(ballId) => history.commit(setTargetBall(present, selectedId, ballId))}
-            onLabelChange={(label) => history.commit(setZoneLabel(present, selectedId, label))}
-          />
-        ) : (
-          <p className="text-sm text-neutral-500">
-            Select a target to choose its ball or label it.
-          </p>
-        )}
-      </div>
+      <InspectorRow
+        layout={present}
+        pending={pending}
+        selectedTarget={selectedTarget}
+        selectedAnnotation={selectedAnnotation}
+        onFinishPath={finishPath}
+        onCancelPath={() => setPending(null)}
+        onTargetBallChange={(ballId) =>
+          selectedId && history.commit(setTargetBall(present, selectedId, ballId))
+        }
+        onZoneLabelChange={(label) =>
+          selectedId && history.commit(setZoneLabel(present, selectedId, label))
+        }
+        onAnnotationTextChange={(value) =>
+          selectedId && history.commit(setAnnotationText(present, selectedId, value))
+        }
+      />
       {table}
     </div>
   );
