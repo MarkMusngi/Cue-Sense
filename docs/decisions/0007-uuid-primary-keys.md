@@ -1,6 +1,6 @@
 # 0007: uuid primary keys
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-10-15
 - **Jira:** CUE-7
 - **Deviates from:** none. Adds to `docs/architecture.md` §4.5, which did not specify an id type. Recorded as an ADR because primary key type is expensive to reverse.

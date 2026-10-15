@@ -23,4 +23,4 @@ Short records of decisions that deviate from, or add to, `docs/architecture.md`.
 | [0003](0003-head-rail-at-x-zero.md) | Head rail at `x = 0` | Proposed |
 | [0004](0004-drop-attempts-observations.md) | Drop `attempts.observations` | Proposed |
 | [0005](0005-role-foreign-keys-and-kind-discriminator.md) | Role-prefixed foreign keys and `kind` as the discriminator key | Proposed |
-| [0007](0007-uuid-primary-keys.md) | uuid primary keys | Proposed |
+| [0007](0007-uuid-primary-keys.md) | uuid primary keys | Accepted |
