@@ -1,4 +1,6 @@
-from sqlalchemy import BigInteger, ForeignKey, ForeignKeyConstraint, Index
+import uuid
+
+from sqlalchemy import ForeignKey, ForeignKeyConstraint, Index
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
@@ -15,9 +17,9 @@ class DrillTag(Base):
         ForeignKeyConstraint(
             ["owner_id", "tag_id"], ["tags.owner_id", "tags.id"], ondelete="CASCADE"
         ),
-        Index("ix_drill_tags_tag_id", "tag_id"),
+        Index("ix_drill_tags_owner_id_tag_id", "owner_id", "tag_id"),
     )
 
-    owner_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("users.id"))
-    drill_id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
-    tag_id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    owner_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"))
+    drill_id: Mapped[uuid.UUID] = mapped_column(primary_key=True)
+    tag_id: Mapped[uuid.UUID] = mapped_column(primary_key=True)

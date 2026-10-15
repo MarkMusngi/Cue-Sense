@@ -14,6 +14,9 @@ def test_migrations_downgrade_and_upgrade_cleanly(alembic_config: Config) -> Non
 
 def test_models_match_the_migrations(test_engine: Engine) -> None:
     with test_engine.connect() as connection:
-        differences = compare_metadata(MigrationContext.configure(connection), Base.metadata)
+        differences = compare_metadata(
+            MigrationContext.configure(connection, opts={"compare_server_default": True}),
+            Base.metadata,
+        )
 
     assert differences == []

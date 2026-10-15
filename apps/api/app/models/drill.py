@@ -1,20 +1,20 @@
+import uuid
 from datetime import datetime
 
 from sqlalchemy import (
-    BigInteger,
     CheckConstraint,
     ForeignKey,
     ForeignKeyConstraint,
-    Identity,
     Index,
     SmallInteger,
     Text,
     UniqueConstraint,
     func,
+    text,
 )
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.db.base import Base
+from app.db.base import Base, uuid_primary_key
 
 
 class Drill(Base):
@@ -38,19 +38,27 @@ class Drill(Base):
         ForeignKeyConstraint(
             ["owner_id", "source_drill_version_id"],
             ["drill_versions.owner_id", "drill_versions.id"],
+            # Hard-deleting a draft clears the link on its copies, not their owner_id.
+            ondelete="SET NULL (source_drill_version_id)",
             use_alter=True,
         ),
         Index("ix_drills_owner_id_status", "owner_id", "status"),
+        Index(
+            "ix_drills_source_drill_version_id",
+            "source_drill_version_id",
+            postgresql_where=text("source_drill_version_id IS NOT NULL"),
+        ),
     )
 
-    id: Mapped[int] = mapped_column(BigInteger, Identity(), primary_key=True)
-    owner_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("users.id"))
+    id: Mapped[uuid.UUID] = uuid_primary_key()
+    owner_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"))
     title: Mapped[str] = mapped_column(Text)
     slug: Mapped[str] = mapped_column(Text)
     description: Mapped[str | None] = mapped_column(Text)
     difficulty: Mapped[int] = mapped_column(SmallInteger)
     status: Mapped[str] = mapped_column(Text, server_default="draft")
-    current_drill_version_id: Mapped[int | None] = mapped_column(BigInteger)
-    source_drill_version_id: Mapped[int | None] = mapped_column(BigInteger)
+    current_drill_version_id: Mapped[uuid.UUID | None]
+    source_drill_version_id: Mapped[uuid.UUID | None]
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
-    updated_at: Mapped[datetime] = mapped_column(server_default=func.now(), onupdate=func.now())
+    # Refreshed by the set_drills_updated_at trigger, so raw SQL updates count too.
+    updated_at: Mapped[datetime] = mapped_column(server_default=func.now())

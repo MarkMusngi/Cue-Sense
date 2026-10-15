@@ -2,20 +2,19 @@ import uuid
 from datetime import datetime
 
 from sqlalchemy import (
-    BigInteger,
     CheckConstraint,
     ForeignKey,
     ForeignKeyConstraint,
-    Identity,
     Index,
     Integer,
     Text,
     UniqueConstraint,
     func,
+    text,
 )
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.db.base import Base
+from app.db.base import Base, uuid_primary_key
 
 
 class Attempt(Base):
@@ -32,12 +31,22 @@ class Attempt(Base):
         CheckConstraint("attempt_number >= 1", name="attempt_number_positive"),
         CheckConstraint("points >= 0", name="points_non_negative"),
         CheckConstraint("duration_ms >= 0", name="duration_ms_non_negative"),
+        CheckConstraint(
+            "voided_at IS NULL OR voided_at >= recorded_at", name="voided_after_recorded"
+        ),
         Index("ix_attempts_drill_run_id", "drill_run_id"),
+        # Dashboard stats are owner-scoped, time-windowed and ignore voided attempts.
+        Index(
+            "ix_attempts_owner_id_recorded_at",
+            "owner_id",
+            "recorded_at",
+            postgresql_where=text("voided_at IS NULL"),
+        ),
     )
 
-    id: Mapped[int] = mapped_column(BigInteger, Identity(), primary_key=True)
-    owner_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("users.id"))
-    drill_run_id: Mapped[int] = mapped_column(BigInteger)
+    id: Mapped[uuid.UUID] = uuid_primary_key()
+    owner_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"))
+    drill_run_id: Mapped[uuid.UUID]
     attempt_number: Mapped[int] = mapped_column(Integer)
     outcome: Mapped[str] = mapped_column(Text)
     points: Mapped[int | None] = mapped_column(Integer)

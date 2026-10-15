@@ -1,9 +1,10 @@
+import uuid
 from datetime import datetime
 
-from sqlalchemy import BigInteger, Identity, Text, func
+from sqlalchemy import Text, func
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.db.base import Base
+from app.db.base import Base, uuid_primary_key
 
 
 class User(Base):
@@ -11,7 +12,7 @@ class User(Base):
 
     __tablename__ = "users"
 
-    id: Mapped[int] = mapped_column(BigInteger, Identity(), primary_key=True)
+    id: Mapped[uuid.UUID] = uuid_primary_key()
     email: Mapped[str] = mapped_column(Text, unique=True)
     # Nullable until real authentication arrives in Phase 3.
     password_hash: Mapped[str | None] = mapped_column(Text)

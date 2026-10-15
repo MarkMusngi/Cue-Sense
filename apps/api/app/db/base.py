@@ -1,7 +1,8 @@
+import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, MetaData
-from sqlalchemy.orm import DeclarativeBase
+from sqlalchemy import DateTime, MetaData, Uuid, text
+from sqlalchemy.orm import DeclarativeBase, MappedColumn, mapped_column
 
 # Stable, predictable constraint names so later migrations can refer to them.
 NAMING_CONVENTION = {
@@ -18,4 +19,11 @@ class Base(DeclarativeBase):
 
     metadata = MetaData(naming_convention=NAMING_CONVENTION)
     # Every timestamp is timestamptz (docs/architecture.md section 4.5).
-    type_annotation_map = {datetime: DateTime(timezone=True)}
+    type_annotation_map = {datetime: DateTime(timezone=True), uuid.UUID: Uuid}
+
+
+def uuid_primary_key() -> MappedColumn[uuid.UUID]:
+    """A UUID primary key. Python generates it on insert; the database can too."""
+    return mapped_column(
+        Uuid, primary_key=True, default=uuid.uuid4, server_default=text("gen_random_uuid()")
+    )

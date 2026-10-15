@@ -1,12 +1,11 @@
+import uuid
 from datetime import datetime
 from typing import Any
 
 from sqlalchemy import (
-    BigInteger,
     CheckConstraint,
     ForeignKey,
     ForeignKeyConstraint,
-    Identity,
     Integer,
     Text,
     UniqueConstraint,
@@ -15,7 +14,7 @@ from sqlalchemy import (
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.db.base import Base
+from app.db.base import Base, uuid_primary_key
 
 
 class DrillVersion(Base):
@@ -30,9 +29,9 @@ class DrillVersion(Base):
         CheckConstraint("version_number >= 1", name="version_number_positive"),
     )
 
-    id: Mapped[int] = mapped_column(BigInteger, Identity(), primary_key=True)
-    owner_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("users.id"))
-    drill_id: Mapped[int] = mapped_column(BigInteger)
+    id: Mapped[uuid.UUID] = uuid_primary_key()
+    owner_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"))
+    drill_id: Mapped[uuid.UUID]
     version_number: Mapped[int] = mapped_column(Integer)
     instructions: Mapped[str] = mapped_column(Text)
     layout: Mapped[dict[str, Any]] = mapped_column(JSONB)

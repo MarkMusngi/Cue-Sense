@@ -1,15 +1,17 @@
 """Database constraints from docs/architecture.md section 4.5, one rule per test."""
 
+import uuid
 from collections.abc import Iterator
 from contextlib import contextmanager
+from datetime import timedelta
 
 import psycopg
 import pytest
 from sqlalchemy import delete, func, inspect, select, text
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import DBAPIError, IntegrityError
 from sqlalchemy.orm import Session
 
-from app.models import Drill, DrillTag, DrillVersion, Tag
+from app.models import Base, Drill, DrillTag, DrillVersion, Tag
 from tests.factories import (
     make_attempt,
     make_drill,
@@ -85,12 +87,17 @@ def test_version_number_is_unique_per_drill(db_session: Session) -> None:
         make_version(db_session, drill, version_number=1)
 
 
-def test_tag_name_is_unique_per_owner(db_session: Session) -> None:
+def test_tag_name_is_unique_per_owner_ignoring_case(db_session: Session) -> None:
     owner = make_user(db_session)
-    make_tag(db_session, owner, name="cut shots")
+    make_tag(db_session, owner, name="Cut shots")
 
-    with violates(db_session, "uq_tags_owner_id_name"):
-        make_tag(db_session, owner, name="cut shots")
+    with violates(db_session, "ix_tags_owner_id_name_lower_unique"):
+        make_tag(db_session, owner, name="cut SHOTS")
+
+
+def test_same_tag_name_is_allowed_for_different_owners(db_session: Session) -> None:
+    make_tag(db_session, make_user(db_session), name="cut shots")
+    make_tag(db_session, make_user(db_session), name="cut shots")
 
 
 def test_run_number_is_unique_per_session(db_session: Session) -> None:
@@ -131,7 +138,7 @@ def test_owner_can_have_only_one_open_session(db_session: Session) -> None:
     owner = make_user(db_session)
     make_session(db_session, owner)
 
-    with violates(db_session, "uq_practice_sessions_owner_id_open"):
+    with violates(db_session, "ix_practice_sessions_owner_id_open_unique"):
         make_session(db_session, owner)
 
 
@@ -290,6 +297,128 @@ def test_deleting_a_tag_removes_its_links(db_session: Session) -> None:
     db_session.execute(delete(Tag).where(Tag.id == tag.id))
 
     assert db_session.scalar(select(func.count()).select_from(DrillTag)) == 0
+
+
+def test_deleting_a_source_version_clears_the_copy_link_but_keeps_the_owner(
+    db_session: Session,
+) -> None:
+    owner = make_user(db_session)
+    source = make_drill(db_session, owner)
+    copy = make_drill(db_session, owner, source_drill_version_id=source.current_drill_version_id)
+    db_session.execute(
+        text("UPDATE drills SET current_drill_version_id = NULL WHERE id = :id"),
+        {"id": source.id},
+    )
+
+    db_session.execute(
+        delete(DrillVersion).where(DrillVersion.id == source.current_drill_version_id)
+    )
+    db_session.refresh(copy)
+
+    assert copy.source_drill_version_id is None
+    assert copy.owner_id == owner.id
+
+
+# Time ordering
+
+
+def test_session_cannot_end_before_it_starts(db_session: Session) -> None:
+    owner = make_user(db_session)
+    practice_session = make_session(db_session, owner)
+
+    with violates(db_session, "ck_practice_sessions_ended_after_started"):
+        practice_session.ended_at = practice_session.started_at - timedelta(hours=1)
+
+
+def test_drill_run_cannot_end_before_it_starts(db_session: Session) -> None:
+    owner = make_user(db_session)
+    run = make_run(
+        db_session, owner, make_session(db_session, owner), make_drill(db_session, owner)
+    )
+
+    with violates(db_session, "ck_drill_runs_ended_after_started"):
+        run.ended_at = run.started_at - timedelta(hours=1)
+
+
+def test_attempt_cannot_be_voided_before_it_was_recorded(db_session: Session) -> None:
+    owner = make_user(db_session)
+    run = make_run(
+        db_session, owner, make_session(db_session, owner), make_drill(db_session, owner)
+    )
+    attempt = make_attempt(db_session, owner, run)
+
+    with violates(db_session, "ck_attempts_voided_after_recorded"):
+        attempt.voided_at = attempt.recorded_at - timedelta(hours=1)
+
+
+# Database-enforced rules
+
+
+def test_drill_versions_cannot_be_updated(db_session: Session) -> None:
+    drill = make_drill(db_session, make_user(db_session))
+    version = db_session.get_one(DrillVersion, drill.current_drill_version_id)
+
+    with pytest.raises(DBAPIError, match="immutable"), db_session.begin_nested():
+        version.instructions = "Changed after the fact."
+        db_session.flush()
+
+
+def test_updating_a_drill_refreshes_updated_at_in_the_database(db_session: Session) -> None:
+    drill = make_drill(db_session, make_user(db_session))
+    db_session.refresh(drill)
+    created = drill.updated_at
+
+    db_session.execute(text("UPDATE drills SET title = 'Renamed' WHERE id = :id"), {"id": drill.id})
+    db_session.refresh(drill)
+
+    assert drill.updated_at > created
+
+
+# Identifiers and indexes
+
+
+def test_every_id_column_is_a_uuid_generated_by_the_database(db_session: Session) -> None:
+    id_columns = [
+        column
+        for table in Base.metadata.tables.values()
+        for column in table.columns
+        if column.name == "id" or column.name.endswith("_id")
+    ]
+    inspector = inspect(db_session.connection())
+    reflected = {
+        (table, column["name"]): column
+        for table in Base.metadata.tables
+        for column in inspector.get_columns(table)
+    }
+
+    assert id_columns
+    for column in id_columns:
+        found = reflected[(column.table.name, column.name)]
+        assert found["type"].__class__.__name__ == "UUID", f"{column.table.name}.{column.name}"
+    for table in ("users", "drills", "drill_versions", "tags", "practice_sessions"):
+        assert "gen_random_uuid()" in str(reflected[(table, "id")]["default"])
+
+
+def test_new_rows_get_uuid_ids(db_session: Session) -> None:
+    owner = make_user(db_session)
+    drill = make_drill(db_session, owner)
+    run = make_run(db_session, owner, make_session(db_session, owner), drill)
+    attempt = make_attempt(db_session, owner, run)
+
+    for value in (owner.id, drill.id, drill.current_drill_version_id, run.id, attempt.id):
+        assert isinstance(value, uuid.UUID)
+
+
+def test_stats_and_foreign_key_indexes_exist(db_session: Session) -> None:
+    inspector = inspect(db_session.connection())
+
+    def index_names(table: str) -> set[str]:
+        return {str(index["name"]) for index in inspector.get_indexes(table)}
+
+    assert "ix_drill_runs_owner_id_started_at" in index_names("drill_runs")
+    assert "ix_attempts_owner_id_recorded_at" in index_names("attempts")
+    assert "ix_drills_source_drill_version_id" in index_names("drills")
+    assert "ix_drill_tags_owner_id_tag_id" in index_names("drill_tags")
 
 
 # Reserved columns (ADR 0004)

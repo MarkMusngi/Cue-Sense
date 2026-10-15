@@ -1,11 +1,10 @@
+import uuid
 from datetime import datetime
 
 from sqlalchemy import (
-    BigInteger,
     CheckConstraint,
     ForeignKey,
     ForeignKeyConstraint,
-    Identity,
     Index,
     Integer,
     Text,
@@ -14,7 +13,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.db.base import Base
+from app.db.base import Base, uuid_primary_key
 
 
 class DrillRun(Base):
@@ -34,16 +33,18 @@ class DrillRun(Base):
             ["drill_id", "drill_version_id"], ["drill_versions.drill_id", "drill_versions.id"]
         ),
         CheckConstraint("run_number >= 1", name="run_number_positive"),
+        CheckConstraint("ended_at IS NULL OR ended_at >= started_at", name="ended_after_started"),
+        Index("ix_drill_runs_owner_id_started_at", "owner_id", "started_at"),
         Index("ix_drill_runs_drill_id_started_at", "drill_id", "started_at"),
         Index("ix_drill_runs_drill_version_id", "drill_version_id"),
         Index("ix_drill_runs_practice_session_id", "practice_session_id"),
     )
 
-    id: Mapped[int] = mapped_column(BigInteger, Identity(), primary_key=True)
-    owner_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("users.id"))
-    practice_session_id: Mapped[int] = mapped_column(BigInteger)
-    drill_id: Mapped[int] = mapped_column(BigInteger)
-    drill_version_id: Mapped[int] = mapped_column(BigInteger)
+    id: Mapped[uuid.UUID] = uuid_primary_key()
+    owner_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"))
+    practice_session_id: Mapped[uuid.UUID]
+    drill_id: Mapped[uuid.UUID]
+    drill_version_id: Mapped[uuid.UUID]
     run_number: Mapped[int] = mapped_column(Integer)
     started_at: Mapped[datetime] = mapped_column(server_default=func.now())
     ended_at: Mapped[datetime | None]
