@@ -104,6 +104,24 @@ The playing surface uses **diamond units**: `x` from 0 to 8 along the long rail,
 - `schema_version` required and equal to the latest version on write.
 - Errors are structured: `code`, `message`, and `path` to the offending element, so the editor can highlight it.
 
+**Error codes.** The codes and the path format are a contract the editor relies on. `path` is a list of keys and indexes into the input JSON, for example `["object_balls", 2]`. All errors are returned together, ordered by the rows below, then by element order in the input. Schema errors are returned alone, because the other rules need a well-formed layout.
+
+| `code` | Meaning | `path` |
+|---|---|---|
+| `schema_invalid` | Wrong shape or type: missing or unknown key, bad value, unsupported table size | Offending field |
+| `unsupported_schema_version` | `schema_version` is not the latest | `["schema_version"]` |
+| `invalid_id` | Id does not follow `<kind>_<n>`, or the cue ball is not `ball_0` | Element's `id` |
+| `duplicate_id` | Id used twice | Later element's `id` |
+| `too_many_object_balls` | More than 15 object balls | `["object_balls"]` |
+| `duplicate_ball_number` | Ball number used twice | Later ball's `number` |
+| `ball_out_of_bounds` | Ball not fully inside the cushions | Ball |
+| `balls_overlap` | Two balls overlap | Later ball of the pair |
+| `cue_ball_not_behind_head_string` | `behind_head_string` with `x > 2` | `["cue_ball", "x"]` |
+| `unknown_ball_reference` | Target `ball_id` matches no ball | Target's `ball_id` |
+| `pocket_target_cue_ball` | Pocket target references the cue ball | Target's `ball_id` |
+| `position_out_of_bounds` | Zone or annotation not on the table | Zone or annotation |
+| `too_many_annotations` | More than 20 annotations | `["annotations"]` |
+
 **Schema versions (ADR 0002).** Layout and scoring JSON both carry `schema_version`. Stored documents are never rewritten and never re-validated against newer rules. Pure upgrade functions (v1 to v2 and so on) live in `layout_service` and the scoring service and run on read, so the API always returns the latest version. Writes accept only the latest version. Each historical version keeps a test fixture.
 
 ### 4.4 Scoring rules
