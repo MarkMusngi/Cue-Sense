@@ -1,7 +1,10 @@
 import os
 from collections.abc import Iterator
+from pathlib import Path
 
 import pytest
+from alembic import command
+from alembic.config import Config
 from fastapi.testclient import TestClient
 from sqlalchemy import Engine, create_engine
 from sqlalchemy.engine import make_url
@@ -9,6 +12,8 @@ from sqlalchemy.orm import Session
 
 from app.db.session import get_db
 from app.main import create_app
+
+API_ROOT = Path(__file__).resolve().parents[1]
 
 # Nothing listens on port 1, so connecting fails immediately.
 UNREACHABLE_DATABASE_URL = "postgresql+psycopg://nobody:nothing@127.0.0.1:1/unreachable_test"
@@ -26,7 +31,17 @@ def get_test_database_url() -> str:
 
 
 @pytest.fixture(scope="session")
-def test_engine() -> Iterator[Engine]:
+def alembic_config() -> Config:
+    """Alembic pointed at the test database instead of DATABASE_URL."""
+    config = Config(str(API_ROOT / "alembic.ini"))
+    config.attributes["database_url"] = get_test_database_url()
+    config.attributes["configure_logger"] = False
+    return config
+
+
+@pytest.fixture(scope="session")
+def test_engine(alembic_config: Config) -> Iterator[Engine]:
+    command.upgrade(alembic_config, "head")
     engine = create_engine(get_test_database_url())
     yield engine
     engine.dispose()

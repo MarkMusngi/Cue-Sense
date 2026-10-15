@@ -90,6 +90,7 @@ docker compose exec api ruff format --check .
 docker compose exec api mypy app tests
 docker compose exec api alembic revision --autogenerate -m "..."
 docker compose exec api alembic upgrade head
+docker compose exec api python -m app.scripts.seed   # dev user; safe to rerun
 
 # Web (from the repo root)
 pnpm install
