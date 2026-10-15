@@ -1,24 +1,86 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/* Tailwind's dark: variant follows the data-theme attribute, not the OS setting. */
+@custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *));
+
+/*
+ * "Night hall" design tokens (docs/design-system.md). Dark is the default; the root
+ * layout sets data-theme before first paint. lib/design-tokens.test.ts checks the
+ * contrast of these values, so change them here and run the web tests.
+ */
+:root,
+[data-theme="dark"] {
+  --bg: #111315;
+  --surface: #191C1F;
+  --raised: #22262A;
+  --line: #2D3237;
+  --control: #6B727A;
+  --text: #F2EEE4;
+  --muted: #A8A498;
+  --chalk: #5AA9E6;
+  --chalk-ink: #06233A;
+  --chalk-soft: rgba(90, 169, 230, 0.14);
+  --miss: #EE9A4D;
+  --miss-soft: rgba(238, 154, 77, 0.12);
+  --part: #CFC9BA;
+  --focus: #9CD1FF;
+}
+
+[data-theme="light"] {
+  --bg: #F1F2EF;
+  --surface: #FFFFFF;
+  --raised: #F7F7F4;
+  --line: #DCDDD8;
+  --control: #84898E;
+  --text: #16191C;
+  --muted: #575C61;
+  --chalk: #1E6CAF;
+  --chalk-ink: #FFFFFF;
+  --chalk-soft: rgba(30, 108, 175, 0.1);
+  --miss: #A04C0B;
+  --miss-soft: rgba(160, 76, 11, 0.1);
+  --part: #6B6658;
+  --focus: #1E6CAF;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-raised: var(--raised);
+  --color-line: var(--line);
+  --color-control: var(--control);
+  --color-text: var(--text);
+  --color-muted: var(--muted);
+  --color-chalk: var(--chalk);
+  --color-chalk-ink: var(--chalk-ink);
+  --color-chalk-soft: var(--chalk-soft);
+  --color-miss: var(--miss);
+  --color-miss-soft: var(--miss-soft);
+  --color-part: var(--part);
+  --color-focus: var(--focus);
+  --font-display: var(--font-barlow-condensed), "Arial Narrow", sans-serif;
+  --font-sans: var(--font-plex-sans), system-ui, sans-serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, monospace;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+}
+
+/* One visible focus style for every control. */
+:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
