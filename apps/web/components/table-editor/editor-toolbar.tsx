@@ -35,13 +35,23 @@ const TOOLS: { tool: EditorTool; label: string; hint: string }[] = [
   { tool: "text", label: "Text", hint: "Click to place a note" },
 ];
 
+/** A one-click command on the layout, such as undo or delete. */
+export type ToolbarAction = {
+  label: string;
+  title: string;
+  testId: string;
+  onClick: () => void;
+  isDisabled?: boolean;
+  // Set for toggles, such as snapping.
+  isPressed?: boolean;
+};
+
 type EditorToolbarProps = {
   tool: EditorTool;
   onToolChange: (tool: EditorTool) => void;
   canAddBall: boolean;
   canAddAnnotation: boolean;
-  canDelete: boolean;
-  onDelete: () => void;
+  actions: ToolbarAction[];
 };
 
 export function EditorToolbar({
@@ -49,11 +59,44 @@ export function EditorToolbar({
   onToolChange,
   canAddBall,
   canAddAnnotation,
-  canDelete,
-  onDelete,
+  actions,
 }: EditorToolbarProps) {
   return (
-    <div role="toolbar" aria-label="Table editor tools" className="flex flex-wrap gap-2">
+    <div role="toolbar" aria-label="Table editor tools" className="flex flex-wrap gap-x-4 gap-y-2">
+      <div className="flex flex-wrap gap-2" role="group" aria-label="Tools">
+        <ToolButtons
+          tool={tool}
+          onToolChange={onToolChange}
+          canAddBall={canAddBall}
+          canAddAnnotation={canAddAnnotation}
+        />
+      </div>
+      <div className="flex flex-wrap gap-2" role="group" aria-label="Actions">
+        {actions.map((action) => (
+          <ToolbarButton
+            key={action.testId}
+            onClick={action.onClick}
+            isDisabled={action.isDisabled}
+            isPressed={action.isPressed}
+            title={action.title}
+            testId={action.testId}
+          >
+            {action.label}
+          </ToolbarButton>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function ToolButtons({
+  tool,
+  onToolChange,
+  canAddBall,
+  canAddAnnotation,
+}: Omit<EditorToolbarProps, "actions">) {
+  return (
+    <>
       {TOOLS.map(({ tool: option, label, hint }) => {
         const fullMessage =
           option === "ball" && !canAddBall
@@ -74,15 +117,7 @@ export function EditorToolbar({
           </ToolbarButton>
         );
       })}
-      <ToolbarButton
-        onClick={onDelete}
-        isDisabled={!canDelete}
-        title="Delete the selection (Delete key)"
-        testId="delete-selected"
-      >
-        Delete
-      </ToolbarButton>
-    </div>
+    </>
   );
 }
 

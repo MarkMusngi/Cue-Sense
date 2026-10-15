@@ -8,7 +8,11 @@ import {
   type PendingPath,
 } from "@/components/table-editor/annotation-layer";
 import { BallLayer } from "@/components/table-editor/ball-layer";
-import { EditorToolbar, type EditorTool } from "@/components/table-editor/editor-toolbar";
+import {
+  EditorToolbar,
+  type EditorTool,
+  type ToolbarAction,
+} from "@/components/table-editor/editor-toolbar";
 import { InspectorRow } from "@/components/table-editor/inspector-row";
 import { TABLE_VIEW_BOX, TableSurface } from "@/components/table-editor/table-surface";
 import { TargetLayer, type TargetPart } from "@/components/table-editor/target-layer";
@@ -23,7 +27,13 @@ import {
   removeAnnotation,
   setAnnotationText,
 } from "@/lib/annotation-edits";
-import { CUE_BALL_ID, MAX_OBJECT_BALLS, type Layout, type Point } from "@/lib/layout";
+import {
+  CUE_BALL_ID,
+  MAX_OBJECT_BALLS,
+  SNAP_STEP,
+  type Layout,
+  type Point,
+} from "@/lib/layout";
 import {
   addObjectBall,
   findBall,
@@ -93,8 +103,7 @@ export function TableEditor({ layout, onChange, readOnly = false }: TableEditorP
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [drag, setDrag] = useState<Drag | null>(null);
   const [pending, setPending] = useState<PendingPath | null>(null);
-  // Snap toggle arrives with the toolbar (build step 6); on by default.
-  const isSnapping = true;
+  const [isSnapping, setIsSnapping] = useState(true);
 
   const present = history.present;
   const shown = drag?.draft ?? present;
@@ -288,6 +297,53 @@ export function TableEditor({ layout, onChange, readOnly = false }: TableEditorP
     setSelectedId(null);
   }
 
+  /** Undo, redo or reset: drop anything half-drawn, then move through the history. */
+  function travel(move: () => void) {
+    if (drag) {
+      return;
+    }
+    setPending(null);
+    move();
+  }
+
+  const actions: ToolbarAction[] = [
+    {
+      label: "Snap",
+      title: `Snap to a ${SNAP_STEP} diamond grid (${isSnapping ? "on" : "off"})`,
+      testId: "toggle-snap",
+      isPressed: isSnapping,
+      onClick: () => setIsSnapping(!isSnapping),
+    },
+    {
+      label: "Undo",
+      title: "Undo (Ctrl+Z)",
+      testId: "undo",
+      isDisabled: !history.canUndo,
+      onClick: () => travel(history.undo),
+    },
+    {
+      label: "Redo",
+      title: "Redo (Ctrl+Shift+Z or Ctrl+Y)",
+      testId: "redo",
+      isDisabled: !history.canRedo,
+      onClick: () => travel(history.redo),
+    },
+    {
+      label: "Reset",
+      title: "Back to the layout as it was loaded (can be undone)",
+      testId: "reset",
+      isDisabled: !history.canReset,
+      onClick: () => travel(history.reset),
+    },
+    {
+      label: "Delete",
+      title: "Delete the selection (Delete key)",
+      testId: "delete-selected",
+      isDisabled: !canDelete,
+      onClick: deleteSelected,
+    },
+  ];
+
   function changeTool(next: EditorTool) {
     setPending(null);
     setTool(next);
@@ -350,7 +406,12 @@ export function TableEditor({ layout, onChange, readOnly = false }: TableEditorP
   }
 
   function handleKeyDown(event: KeyboardEvent<SVGSVGElement>) {
-    if (event.key === "Enter" && pending) {
+    const key = event.key.toLowerCase();
+    if ((event.ctrlKey || event.metaKey) && (key === "z" || key === "y")) {
+      event.preventDefault();
+      const isRedo = key === "y" || event.shiftKey;
+      travel(isRedo ? history.redo : history.undo);
+    } else if (event.key === "Enter" && pending) {
       event.preventDefault();
       finishPath();
     } else if (event.key === "Delete" || event.key === "Backspace") {
@@ -423,8 +484,7 @@ export function TableEditor({ layout, onChange, readOnly = false }: TableEditorP
         onToolChange={changeTool}
         canAddBall={canAddBall}
         canAddAnnotation={canAddAnnotation(present)}
-        canDelete={canDelete}
-        onDelete={deleteSelected}
+        actions={actions}
       />
       <InspectorRow
         layout={present}

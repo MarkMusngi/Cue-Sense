@@ -42,5 +42,7 @@ export function useLayoutHistory(layout: Layout, onChange?: (layout: Layout) => 
     reset: () => apply({ type: "reset" }),
     canUndo: canUndo(current),
     canRedo: canRedo(current),
+    // Reset returns to the layout the editor was given.
+    canReset: current.present !== current.baseline,
   };
 }
