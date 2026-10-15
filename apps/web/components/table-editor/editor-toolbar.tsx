@@ -1,6 +1,18 @@
 import type { ReactNode } from "react";
 
-export type EditorTool = "select" | "ball";
+export type EditorTool = "select" | "ball" | "pocket_target" | "circle_zone" | "rect_zone";
+
+const TOOLS: { tool: EditorTool; label: string; hint: string }[] = [
+  { tool: "select", label: "Select", hint: "Select and drag balls and zones" },
+  { tool: "ball", label: "Add ball", hint: "Click the table to place a ball" },
+  {
+    tool: "pocket_target",
+    label: "Pocket target",
+    hint: "Click a pocket; links the selected object ball if there is one",
+  },
+  { tool: "circle_zone", label: "Circle zone", hint: "Click to place a circle zone" },
+  { tool: "rect_zone", label: "Rect zone", hint: "Click to place a rect zone's top-left corner" },
+];
 
 type EditorToolbarProps = {
   tool: EditorTool;
@@ -19,26 +31,25 @@ export function EditorToolbar({
 }: EditorToolbarProps) {
   return (
     <div role="toolbar" aria-label="Table editor tools" className="flex flex-wrap gap-2">
-      <ToolbarButton
-        isPressed={tool === "select"}
-        onClick={() => onToolChange("select")}
-        testId="tool-select"
-      >
-        Select
-      </ToolbarButton>
-      <ToolbarButton
-        isPressed={tool === "ball"}
-        onClick={() => onToolChange("ball")}
-        isDisabled={!canAddBall}
-        title={canAddBall ? "Click the table to place a ball" : "A layout has at most 15 object balls"}
-        testId="tool-ball"
-      >
-        Add ball
-      </ToolbarButton>
+      {TOOLS.map(({ tool: option, label, hint }) => {
+        const isFull = option === "ball" && !canAddBall;
+        return (
+          <ToolbarButton
+            key={option}
+            isPressed={tool === option}
+            onClick={() => onToolChange(option)}
+            isDisabled={isFull}
+            title={isFull ? "A layout has at most 15 object balls" : hint}
+            testId={`tool-${option}`}
+          >
+            {label}
+          </ToolbarButton>
+        );
+      })}
       <ToolbarButton
         onClick={onDelete}
         isDisabled={!canDelete}
-        title="Delete the selected ball (Delete key)"
+        title="Delete the selection (Delete key)"
         testId="delete-selected"
       >
         Delete

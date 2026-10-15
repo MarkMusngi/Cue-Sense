@@ -5,6 +5,8 @@ import { useRef, useState, type KeyboardEvent, type PointerEvent } from "react";
 import { BallLayer } from "@/components/table-editor/ball-layer";
 import { EditorToolbar, type EditorTool } from "@/components/table-editor/editor-toolbar";
 import { TABLE_VIEW_BOX, TableSurface } from "@/components/table-editor/table-surface";
+import { TargetInspector } from "@/components/table-editor/target-inspector";
+import { TargetLayer, type TargetPart } from "@/components/table-editor/target-layer";
 import { useLayoutHistory } from "@/components/table-editor/use-layout-history";
 import { CUE_BALL_ID, MAX_OBJECT_BALLS, type Layout, type Point } from "@/lib/layout";
 import {
@@ -14,7 +16,24 @@ import {
   otherBallPositions,
   removeBall,
 } from "@/lib/layout-edits";
-import { ballRadius, ballsOverlap, clampToCushions, placeBall } from "@/lib/table-geometry";
+import {
+  ballRadius,
+  ballsOverlap,
+  clampToCushions,
+  placeBall,
+  snapToGrid,
+} from "@/lib/table-geometry";
+import {
+  addPocketTarget,
+  addZone,
+  findTarget,
+  moveZone,
+  nearestPocket,
+  removeTarget,
+  resizeZone,
+  setTargetBall,
+  setZoneLabel,
+} from "@/lib/target-edits";
 
 export type TableEditorProps = {
   /**
@@ -30,8 +49,10 @@ export type TableEditorProps = {
 
 type Drag = {
   pointerId: number;
-  ballId: string;
-  // Ball centre minus pointer, so the ball does not jump under the pointer.
+  // A ball or zone moves; a zone handle resizes.
+  kind: "ball" | "zone" | "resize";
+  id: string;
+  // Element anchor minus pointer, so the element does not jump under the pointer.
   offset: Point;
   // The layout as the drag shows it; committed once on pointer up.
   draft: Layout;
@@ -50,13 +71,13 @@ export function TableEditor({ layout, onChange, readOnly = false }: TableEditorP
   // Snap toggle arrives with the toolbar (build step 6); on by default.
   const isSnapping = true;
 
-  const shown = drag?.draft ?? history.present;
+  const present = history.present;
+  const shown = drag?.draft ?? present;
   const radius = ballRadius(shown.table.size_ft);
-  const canAddBall = history.present.object_balls.length < MAX_OBJECT_BALLS;
-  const canDelete =
-    selectedId !== null &&
-    selectedId !== CUE_BALL_ID &&
-    findBall(history.present, selectedId) !== undefined;
+  const selectedTarget = selectedId ? findTarget(present, selectedId) : undefined;
+  const selectedBall = selectedId ? findBall(present, selectedId) : undefined;
+  const canAddBall = present.object_balls.length < MAX_OBJECT_BALLS;
+  const canDelete = selectedTarget !== undefined || (selectedBall !== undefined && selectedId !== CUE_BALL_ID);
 
   function toTablePoint(event: PointerEvent): Point {
     const matrix = svgRef.current?.getScreenCTM();
@@ -67,42 +88,83 @@ export function TableEditor({ layout, onChange, readOnly = false }: TableEditorP
     return { x: point.x, y: point.y };
   }
 
+  function snap(point: Point): Point {
+    return isSnapping ? snapToGrid(point) : point;
+  }
+
   function focusTable() {
     svgRef.current?.focus({ preventScroll: true });
   }
 
-  function handleBallPointerDown(event: PointerEvent<SVGGElement>, ballId: string) {
-    if (event.pointerType === "mouse" && event.button !== 0) {
-      return;
-    }
-    const ball = findBall(history.present, ballId);
-    if (!ball) {
-      return;
-    }
+  function startDrag(event: PointerEvent, kind: Drag["kind"], id: string, anchor: Point) {
     event.stopPropagation();
     focusTable();
     svgRef.current?.setPointerCapture(event.pointerId);
     const pointer = toTablePoint(event);
-    setSelectedId(ballId);
+    setSelectedId(id);
     setDrag({
       pointerId: event.pointerId,
-      ballId,
-      offset: { x: ball.x - pointer.x, y: ball.y - pointer.y },
-      draft: history.present,
+      kind,
+      id,
+      offset: { x: anchor.x - pointer.x, y: anchor.y - pointer.y },
+      draft: present,
     });
+  }
+
+  function isPrimary(event: PointerEvent): boolean {
+    return event.pointerType !== "mouse" || event.button === 0;
+  }
+
+  function handleBallPointerDown(event: PointerEvent<SVGGElement>, ballId: string) {
+    const ball = findBall(present, ballId);
+    if (isPrimary(event) && ball) {
+      startDrag(event, "ball", ballId, ball);
+    }
+  }
+
+  function handleTargetPointerDown(event: PointerEvent<SVGElement>, id: string, part: TargetPart) {
+    const target = findTarget(present, id);
+    if (!isPrimary(event) || !target) {
+      return;
+    }
+    if (target.kind === "pocket") {
+      event.stopPropagation();
+      focusTable();
+      setSelectedId(id);
+    } else if (part === "handle") {
+      startDrag(event, "resize", id, { x: 0, y: 0 });
+    } else {
+      startDrag(event, "zone", id, target);
+    }
   }
 
   function handleTablePointerDown(event: PointerEvent<SVGSVGElement>) {
     focusTable();
+    const point = toTablePoint(event);
     if (tool === "ball") {
-      addBallAt(toTablePoint(event));
+      addBallAt(point);
+    } else if (tool === "pocket_target") {
+      const pocket = nearestPocket(point);
+      if (pocket) {
+        const linked = selectedBall && selectedId !== CUE_BALL_ID ? selectedId ?? undefined : undefined;
+        commitAndSelectLastTarget(addPocketTarget(present, pocket, linked));
+      }
+    } else if (tool === "circle_zone" || tool === "rect_zone") {
+      commitAndSelectLastTarget(addZone(present, tool === "circle_zone" ? "circle" : "rect", snap(point)));
     } else {
       setSelectedId(null);
     }
   }
 
+  function commitAndSelectLastTarget(next: Layout) {
+    history.commit(next);
+    setSelectedId(next.targets[next.targets.length - 1].id);
+    // Targets are placed one at a time; go back to selecting so the new one can be adjusted.
+    setTool("select");
+  }
+
   function addBallAt(point: Point) {
-    const others = otherBallPositions(history.present, "");
+    const others = otherBallPositions(present, "");
     const placed = placeBall(point, others, radius, {
       isSnapping,
       fallback: clampToCushions(point, radius),
@@ -111,18 +173,19 @@ export function TableEditor({ layout, onChange, readOnly = false }: TableEditorP
     if (others.some((other) => ballsOverlap(placed, other, radius))) {
       return;
     }
-    const next = addObjectBall(history.present, placed);
-    if (next !== history.present) {
+    const next = addObjectBall(present, placed);
+    if (next !== present) {
       history.commit(next);
       setSelectedId(next.object_balls[next.object_balls.length - 1].id);
     }
   }
 
   function deleteSelected() {
-    if (canDelete && selectedId) {
-      history.commit(removeBall(history.present, selectedId));
-      setSelectedId(null);
+    if (!canDelete || !selectedId) {
+      return;
     }
+    history.commit(selectedTarget ? removeTarget(present, selectedId) : removeBall(present, selectedId));
+    setSelectedId(null);
   }
 
   function handlePointerMove(event: PointerEvent<SVGSVGElement>) {
@@ -130,17 +193,24 @@ export function TableEditor({ layout, onChange, readOnly = false }: TableEditorP
       return;
     }
     const pointer = toTablePoint(event);
-    const current = findBall(drag.draft, drag.ballId);
-    if (!current) {
-      return;
+    const moved = { x: pointer.x + drag.offset.x, y: pointer.y + drag.offset.y };
+    let draft = drag.draft;
+    if (drag.kind === "ball") {
+      const current = findBall(draft, drag.id);
+      if (!current) {
+        return;
+      }
+      const placed = placeBall(moved, otherBallPositions(draft, drag.id), radius, {
+        isSnapping,
+        fallback: { x: current.x, y: current.y },
+      });
+      draft = moveBall(draft, drag.id, placed);
+    } else if (drag.kind === "zone") {
+      draft = moveZone(draft, drag.id, snap(moved));
+    } else {
+      draft = resizeZone(draft, drag.id, snap(pointer));
     }
-    const placed = placeBall(
-      { x: pointer.x + drag.offset.x, y: pointer.y + drag.offset.y },
-      otherBallPositions(drag.draft, drag.ballId),
-      radius,
-      { isSnapping, fallback: { x: current.x, y: current.y } },
-    );
-    setDrag({ ...drag, draft: moveBall(drag.draft, drag.ballId, placed) });
+    setDrag({ ...drag, draft });
   }
 
   function handlePointerUp(event: PointerEvent<SVGSVGElement>) {
@@ -181,7 +251,7 @@ export function TableEditor({ layout, onChange, readOnly = false }: TableEditorP
       className={[
         "block h-auto w-full select-none rounded-lg outline-none",
         readOnly ? "" : "focus-visible:ring-2 focus-visible:ring-sky-500",
-        tool === "ball" && !readOnly ? "cursor-crosshair" : "",
+        tool !== "select" && !readOnly ? "cursor-crosshair" : "",
       ].join(" ")}
       onPointerDown={readOnly ? undefined : handleTablePointerDown}
       onPointerMove={readOnly ? undefined : handlePointerMove}
@@ -190,6 +260,12 @@ export function TableEditor({ layout, onChange, readOnly = false }: TableEditorP
       onKeyDown={readOnly ? undefined : handleKeyDown}
     >
       <TableSurface />
+      <TargetLayer
+        layout={shown}
+        selectedId={readOnly ? null : selectedId}
+        // Only the select tool picks targets; other tools place things on top of zones.
+        onTargetPointerDown={readOnly || tool !== "select" ? undefined : handleTargetPointerDown}
+      />
       <BallLayer
         layout={shown}
         radius={radius}
@@ -214,6 +290,21 @@ export function TableEditor({ layout, onChange, readOnly = false }: TableEditorP
         canDelete={canDelete}
         onDelete={deleteSelected}
       />
+      {/* A fixed-height row, so selecting a target never moves the table under the pointer. */}
+      <div className="flex min-h-9 items-center">
+        {selectedTarget && selectedId ? (
+          <TargetInspector
+            layout={present}
+            target={selectedTarget}
+            onBallChange={(ballId) => history.commit(setTargetBall(present, selectedId, ballId))}
+            onLabelChange={(label) => history.commit(setZoneLabel(present, selectedId, label))}
+          />
+        ) : (
+          <p className="text-sm text-neutral-500">
+            Select a target to choose its ball or label it.
+          </p>
+        )}
+      </div>
       {table}
     </div>
   );

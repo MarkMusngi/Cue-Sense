@@ -1,4 +1,11 @@
-import { HEAD_STRING_X, POCKETS, TABLE_LENGTH, TABLE_WIDTH, type PocketName } from "@/lib/layout";
+import {
+  HEAD_STRING_X,
+  POCKETS,
+  TABLE_LENGTH,
+  TABLE_WIDTH,
+  type PocketName,
+  type Point,
+} from "@/lib/layout";
 
 // Everything here is in diamond units; the playing surface is 0..8 by 0..4.
 export const RAIL_WIDTH = 0.45;
@@ -103,12 +110,20 @@ function Diamonds() {
   );
 }
 
-function Pocket({ name }: { name: PocketName }) {
+/** Where a pocket is drawn: set back from where the cushion noses meet. */
+export function pocketCentre(name: PocketName): Point {
   const { x, y } = POCKETS[name];
   const isSide = name.endsWith("middle");
   const offset = isSide ? SIDE_POCKET_OFFSET : CORNER_POCKET_OFFSET;
-  const cx = isSide ? x : x === 0 ? -offset : x + offset;
-  const cy = y === 0 ? -offset : y + offset;
+  return {
+    x: isSide ? x : x === 0 ? -offset : x + offset,
+    y: y === 0 ? -offset : y + offset,
+  };
+}
+
+function Pocket({ name }: { name: PocketName }) {
+  const isSide = name.endsWith("middle");
+  const { x: cx, y: cy } = pocketCentre(name);
   return (
     <circle
       cx={cx}
