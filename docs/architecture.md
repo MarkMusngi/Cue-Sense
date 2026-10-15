@@ -248,7 +248,8 @@ attempts(id, owner_id, drill_run_id, attempt_number,
 ```
 POST   /drills                              create a drill and version 1
                                             (body may include source_drill_id to duplicate)
-GET    /drills                              list (filters: tag, difficulty, status, search)
+GET    /drills                              list (filters: tag_id, difficulty, status, search;
+                                            all statuses when status is omitted)
 GET    /drills/{id}                         drill and current version
 PUT    /drills/{id}                         save edits; new version if layout, instructions
                                             or scoring changed (body: base_drill_version_id)
@@ -269,10 +270,30 @@ PATCH  /attempts/{id}                       correct an attempt, or undo it (void
 ```
 
 Rules:
-- Pagination on every list.
-- One consistent error shape.
+- Pagination on every list: `limit` (default 20, at most 100) and `offset` query parameters. Lists return `{"items": [...], "total", "limit", "offset"}`.
+- One consistent error shape (below).
 - Another user's resources return 404.
 - 409 for a stale `base_drill_version_id`, an archived drill, or an ended session.
+- The current user comes from one `get_current_user` dependency. Until Phase 3 it returns the seeded dev user.
+
+**Error shape.** Every error response, including request validation errors, is:
+
+```json
+{ "error": { "code": "validation_failed", "message": "The drill is invalid.",
+             "details": [ { "code": "balls_overlap", "message": "…", "path": ["layout", "object_balls", 2] } ] } }
+```
+
+`details` is empty unless the request had several problems. A detail's `path` points into the request body; query and path parameter errors start with `"query"` or `"path"`. Layout details use the codes in section 4.3, prefixed with `"layout"`.
+
+| Status | `code` | When |
+|---|---|---|
+| 404 | `not_found` | Missing, or owned by another user |
+| 409 | `stale_version` | `base_drill_version_id` is not the current version |
+| 409 | `invalid_status_transition` | For example archived to draft (nothing goes back to draft) |
+| 409 | `drill_not_deletable` | Deleting anything but a draft without history |
+| 409 | `duplicate_tag_name` | Tag names are unique per owner, ignoring case |
+| 422 | `validation_failed` | Details use `schema_invalid`, the layout codes, `unsupported_schema_version`, `pass_threshold_too_high` or `unknown_tag` |
+| 503 | `dev_user_missing` | The seed script has not created the dev user |
 - The `Idempotency-Key` header is a client-generated UUID stored as `attempts.idempotency_key`. A replay returns the original attempt, so a flaky phone connection cannot double-log an attempt.
 
 ### 4.7 Frontend screens

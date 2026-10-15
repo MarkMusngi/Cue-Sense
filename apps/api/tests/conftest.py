@@ -6,12 +6,14 @@ import pytest
 from alembic import command
 from alembic.config import Config
 from fastapi.testclient import TestClient
-from sqlalchemy import Engine, create_engine
+from sqlalchemy import Engine, create_engine, text
 from sqlalchemy.engine import make_url
 from sqlalchemy.orm import Session
 
+from app.core.auth import get_current_user
 from app.db.session import get_db
 from app.main import create_app
+from app.models import User
 
 API_ROOT = Path(__file__).resolve().parents[1]
 
@@ -65,11 +67,19 @@ def unreachable_db_session() -> Iterator[Session]:
     engine.dispose()
 
 
-def make_client(session: Session) -> TestClient:
+def make_client(session: Session, user: User | None = None) -> TestClient:
+    """A client on the test session, acting as user when one is given."""
     app = create_app()
 
     def override_get_db() -> Iterator[Session]:
         yield session
 
     app.dependency_overrides[get_db] = override_get_db
+    if user is not None:
+        app.dependency_overrides[get_current_user] = lambda: user
     return TestClient(app)
+
+
+def check_deferred_constraints(db: Session) -> None:
+    """Tests never commit, so check deferred foreign keys now instead of at commit."""
+    db.execute(text("SET CONSTRAINTS ALL IMMEDIATE"))
