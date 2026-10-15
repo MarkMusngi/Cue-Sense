@@ -175,7 +175,7 @@ attempts(id, owner_id, drill_run_id, attempt_number,
 - Success rate, streaks and trends are derived with queries; computed totals are not stored.
 - `attempts.tapped_at` is the client's time of the tap, and `recorded_at` is the server's receipt time. Both are kept for aligning video later.
 - Timestamps are `timestamptz`.
-- Every `id` is a `uuid`. Python generates it on insert and the column defaults to `gen_random_uuid()`.
+- Every `id` is a `uuid`. Python generates it on insert and the column defaults to `gen_random_uuid()` (ADR 0007).
 - Time order is checked: `ended_at >= started_at` on `practice_sessions` and `drill_runs`, and `voided_at >= recorded_at` on `attempts`.
 - The database enforces two rules the ORM cannot: `drill_versions` rows cannot be updated (trigger), and `drills.updated_at` is refreshed on every update (trigger).
 
