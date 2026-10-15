@@ -1,13 +1,20 @@
 "use client";
 
-import { useRef, useState, type PointerEvent } from "react";
+import { useRef, useState, type KeyboardEvent, type PointerEvent } from "react";
 
 import { BallLayer } from "@/components/table-editor/ball-layer";
+import { EditorToolbar, type EditorTool } from "@/components/table-editor/editor-toolbar";
 import { TABLE_VIEW_BOX, TableSurface } from "@/components/table-editor/table-surface";
 import { useLayoutHistory } from "@/components/table-editor/use-layout-history";
-import type { Layout, Point } from "@/lib/layout";
-import { findBall, moveBall, otherBallPositions } from "@/lib/layout-edits";
-import { ballRadius, placeBall } from "@/lib/table-geometry";
+import { CUE_BALL_ID, MAX_OBJECT_BALLS, type Layout, type Point } from "@/lib/layout";
+import {
+  addObjectBall,
+  findBall,
+  moveBall,
+  otherBallPositions,
+  removeBall,
+} from "@/lib/layout-edits";
+import { ballRadius, ballsOverlap, clampToCushions, placeBall } from "@/lib/table-geometry";
 
 export type TableEditorProps = {
   /**
@@ -37,6 +44,7 @@ type Drag = {
 export function TableEditor({ layout, onChange, readOnly = false }: TableEditorProps) {
   const svgRef = useRef<SVGSVGElement>(null);
   const history = useLayoutHistory(layout, onChange);
+  const [tool, setTool] = useState<EditorTool>("select");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [drag, setDrag] = useState<Drag | null>(null);
   // Snap toggle arrives with the toolbar (build step 6); on by default.
@@ -44,6 +52,11 @@ export function TableEditor({ layout, onChange, readOnly = false }: TableEditorP
 
   const shown = drag?.draft ?? history.present;
   const radius = ballRadius(shown.table.size_ft);
+  const canAddBall = history.present.object_balls.length < MAX_OBJECT_BALLS;
+  const canDelete =
+    selectedId !== null &&
+    selectedId !== CUE_BALL_ID &&
+    findBall(history.present, selectedId) !== undefined;
 
   function toTablePoint(event: PointerEvent): Point {
     const matrix = svgRef.current?.getScreenCTM();
@@ -52,6 +65,10 @@ export function TableEditor({ layout, onChange, readOnly = false }: TableEditorP
     }
     const point = new DOMPoint(event.clientX, event.clientY).matrixTransform(matrix.inverse());
     return { x: point.x, y: point.y };
+  }
+
+  function focusTable() {
+    svgRef.current?.focus({ preventScroll: true });
   }
 
   function handleBallPointerDown(event: PointerEvent<SVGGElement>, ballId: string) {
@@ -63,6 +80,7 @@ export function TableEditor({ layout, onChange, readOnly = false }: TableEditorP
       return;
     }
     event.stopPropagation();
+    focusTable();
     svgRef.current?.setPointerCapture(event.pointerId);
     const pointer = toTablePoint(event);
     setSelectedId(ballId);
@@ -72,6 +90,39 @@ export function TableEditor({ layout, onChange, readOnly = false }: TableEditorP
       offset: { x: ball.x - pointer.x, y: ball.y - pointer.y },
       draft: history.present,
     });
+  }
+
+  function handleTablePointerDown(event: PointerEvent<SVGSVGElement>) {
+    focusTable();
+    if (tool === "ball") {
+      addBallAt(toTablePoint(event));
+    } else {
+      setSelectedId(null);
+    }
+  }
+
+  function addBallAt(point: Point) {
+    const others = otherBallPositions(history.present, "");
+    const placed = placeBall(point, others, radius, {
+      isSnapping,
+      fallback: clampToCushions(point, radius),
+    });
+    // No room here: placing would overlap a ball that could not be pushed aside.
+    if (others.some((other) => ballsOverlap(placed, other, radius))) {
+      return;
+    }
+    const next = addObjectBall(history.present, placed);
+    if (next !== history.present) {
+      history.commit(next);
+      setSelectedId(next.object_balls[next.object_balls.length - 1].id);
+    }
+  }
+
+  function deleteSelected() {
+    if (canDelete && selectedId) {
+      history.commit(removeBall(history.present, selectedId));
+      setSelectedId(null);
+    }
   }
 
   function handlePointerMove(event: PointerEvent<SVGSVGElement>) {
@@ -107,19 +158,36 @@ export function TableEditor({ layout, onChange, readOnly = false }: TableEditorP
     }
   }
 
-  return (
+  function handleKeyDown(event: KeyboardEvent<SVGSVGElement>) {
+    if (event.key === "Delete" || event.key === "Backspace") {
+      event.preventDefault();
+      deleteSelected();
+    } else if (event.key === "Escape") {
+      setTool("select");
+      setSelectedId(null);
+    }
+  }
+
+  const table = (
     <svg
       ref={svgRef}
       viewBox={TABLE_VIEW_BOX}
-      role="img"
+      role={readOnly ? "img" : "application"}
       aria-label={`Pool table layout, ${shown.table.size_ft} ft`}
+      aria-roledescription={readOnly ? undefined : "table layout editor"}
+      tabIndex={readOnly ? undefined : 0}
       data-testid="table-editor"
       data-readonly={readOnly}
-      className="block h-auto w-full select-none"
+      className={[
+        "block h-auto w-full select-none rounded-lg outline-none",
+        readOnly ? "" : "focus-visible:ring-2 focus-visible:ring-sky-500",
+        tool === "ball" && !readOnly ? "cursor-crosshair" : "",
+      ].join(" ")}
+      onPointerDown={readOnly ? undefined : handleTablePointerDown}
       onPointerMove={readOnly ? undefined : handlePointerMove}
       onPointerUp={readOnly ? undefined : handlePointerUp}
       onPointerCancel={readOnly ? undefined : handlePointerCancel}
-      onPointerDown={readOnly ? undefined : () => setSelectedId(null)}
+      onKeyDown={readOnly ? undefined : handleKeyDown}
     >
       <TableSurface />
       <BallLayer
@@ -129,5 +197,24 @@ export function TableEditor({ layout, onChange, readOnly = false }: TableEditorP
         onBallPointerDown={readOnly ? undefined : handleBallPointerDown}
       />
     </svg>
+  );
+
+  if (readOnly) {
+    return table;
+  }
+  return (
+    <div className="flex flex-col gap-2">
+      <EditorToolbar
+        tool={tool}
+        onToolChange={(next) => {
+          setTool(next);
+          focusTable();
+        }}
+        canAddBall={canAddBall}
+        canDelete={canDelete}
+        onDelete={deleteSelected}
+      />
+      {table}
+    </div>
   );
 }
