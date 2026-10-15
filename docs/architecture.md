@@ -56,7 +56,7 @@ The playing surface uses **diamond units**: `x` from 0 to 8 along the long rail,
 
 - **Orientation (ADR 0003):** `x = 0` is the head rail, so the head string is at `x = 2` and the foot spot at `(6, 2)`. `y = 0` is the long rail on your left when standing at the head rail facing the foot rail. Diagrams draw the head rail on the left, so the origin is at the top-left.
 - The origin is where the cushion noses would meet. It is not a visible point (the pockets cut the corners, and the diamonds sit back on the rail top).
-- `table.size_ft` is 7, 8 or 9. Ball radius in diamond units is derived: the playing surface length in inches divided by 8 gives one diamond, and a pool ball's diameter is 2.25 in. On a 9 ft table (100 in), one diamond is 12.5 in, so the radius is 0.09.
+- `table.size_ft` is 9 only for now (ADR 0006). Ball radius in diamond units is derived: the playing surface length in inches divided by 8 gives one diamond, and a pool ball's diameter is 2.25 in. On a 9 ft table (100 in), one diamond is 12.5 in, so the radius is 0.09.
 - Positions are floats rounded to 3 decimals. The editor snaps to a 0.05 grid by default, and snapping can be toggled.
 - Pocket positions are fixed per table kind in code, never stored per drill. Pocket names: `top_left`, `top_middle`, `top_right`, `bottom_left`, `bottom_middle`, `bottom_right`.
 
@@ -283,7 +283,7 @@ Five seed drills for dogfooding and test fixtures: straight-in at three distance
 ## 5. Testing strategy
 
 - **Pytest:** the highest-value suite in the project. It covers:
-  - layout validation: overlaps, bounds, frozen balls at the tolerance, bad references, 7 ft vs 9 ft
+  - layout validation: overlaps, bounds, frozen balls at the tolerance, bad references, non-9 ft sizes rejected
   - one upgrade fixture per historical schema version
   - scoring calculations, success rate and set numbering with voided attempts
   - versioning and stale-base 409s
@@ -322,7 +322,7 @@ shot_observations(id, owner_id, video_id, analysis_job_id, start_ms, end_ms,
 ## 7. Open decisions to settle before coding
 
 1. **Game types:** resolved. Pool only for the MVP (`table.kind = pool`). Snooker or carom would change dimensions, ball sizes and pockets.
-2. **Table sizes:** only your new table, or several? Start with just yours.
+2. **Table sizes:** resolved. 9 ft only (ADR 0006).
 3. **Authentication timing:** a stubbed dev user until Phase 3, or real login earlier?
 4. **Phone at the table:** if yes, make the session runner a PWA.
 5. **Video storage:** which drive, and how much space (1080p at 60 fps adds up to several GB per hour).

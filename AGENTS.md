@@ -108,7 +108,7 @@ pnpm --filter web build
 - Never delete, skip, or weaken a test to get green. If a test is truly outdated, update it and explain why.
 - Write tests alongside the feature, not afterward.
 - Project-specific cases that must stay covered:
-  - Layout validation: a ball exactly touching a cushion, two balls exactly touching, 7 ft vs 9 ft tables.
+  - Layout validation: a ball exactly touching a cushion, two balls exactly touching, table sizes other than 9 ft rejected.
   - Versioning: editing creates a new `drill_versions` row only when layout, instructions, or scoring changed.
   - Owner scoping: other users' resources return 404.
   - Idempotency: repeated `Idempotency-Key` on attempt creation does not duplicate.

@@ -129,7 +129,8 @@ annotation count cap; schema_version required.
 Return structured errors (code, message, path to the offending element).
 
 Write thorough pytest tests first, including: a ball exactly touching a cushion,
-two balls exactly touching, and 7 ft vs 9 ft tables. Do not build endpoints yet.
+two balls exactly touching, and table sizes other than 9 ft rejected (ADR 0006).
+Do not build endpoints yet.
 ```
 
 ## Prompt 5: Drill CRUD API (Sonnet 5.5)
