@@ -130,6 +130,19 @@ describe("placeBall", () => {
       { x: 7.91, y: 2 },
     );
   });
+
+  it("keeps a ball at or behind maxX, for ball in hand behind the head string", () => {
+    const options = { isSnapping: true, fallback: { x: 1, y: 2 }, maxX: 2 };
+
+    expect(placeBall({ x: 5, y: 2 }, [], R, options)).toEqual({ x: 2, y: 2 });
+  });
+
+  it("falls back when pushing clear of a ball would cross maxX", () => {
+    // A ball sits on the head string; pushing the cue ball clear would take it past x = 2.
+    const options = { isSnapping: false, fallback: { x: 1, y: 2 }, maxX: 2 };
+
+    expect(placeBall({ x: 1.95, y: 2 }, [{ x: 1.9, y: 2 }], R, options)).toEqual({ x: 1, y: 2 });
+  });
 });
 
 describe("mirrorHorizontal", () => {

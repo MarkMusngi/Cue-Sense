@@ -67,6 +67,8 @@ function Ball({ ball, radius, clipId, isSelected, onPointerDown }: BallProps) {
   return (
     <g
       data-testid={`ball-${ball.id}`}
+      role="img"
+      aria-label={`${label} at ${ball.x}, ${ball.y}${isSelected ? ", selected" : ""}`}
       onPointerDown={onPointerDown}
       className={onPointerDown ? "cursor-grab active:cursor-grabbing" : undefined}
     >

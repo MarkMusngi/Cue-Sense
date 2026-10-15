@@ -83,7 +83,13 @@ The pure helpers in `lib/table-geometry.ts` have unit tests in `lib/table-geomet
   - Larger invisible hit areas for balls (1.6 × radius), handles and path points.
   - One pointer at a time; a lost pointer capture cancels the drag.
   - At phone width a ball is about 3.5 px in radius, so even the enlarged hit area is far below a 44 px touch target. Editing works best in landscape or on a tablet.
-- **Dev preview:** `/dev/table-editor` shows the editor, a read-only thumbnail and the live layout JSON.
+- **Head string:** when the cue ball is in hand behind the head string, dragging or nudging it stops at `x = 2`.
+- **Keyboard:**
+  - Arrow keys nudge the selection by one grid step, or by 0.01 with Shift. Each nudge is one undo step.
+  - Balls carry an `aria-label` with their position.
+  - Selecting an element still needs a pointer. Keyboard selection is a follow-up.
+- **Several commits in one event:** an inspector input saves on blur. The pointerdown that blurs it then starts a gesture in the same event, so `useLayoutHistory` keeps the newest history in a ref. Editor handlers read `getPresent()` or commit an updater, so the second commit builds on the first and no edit is lost.
+- **Dev preview:** `/dev/table-editor` shows the editor, a ball-in-hand selector (a stand-in for the drill form), a read-only thumbnail and the live layout JSON.
 
 ## Not yet
 

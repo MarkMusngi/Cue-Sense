@@ -5,7 +5,10 @@ import { MAX_OBJECT_BALLS, type Layout } from "@/lib/layout";
 
 export type ElementKind = "ball" | "target" | "annotation";
 
-/** One above the highest existing id of this kind, so removed ids are never reused. */
+/**
+ * One above the highest existing id of this kind. Ids below it are never reused, but
+ * removing the highest-numbered element frees its id for the next one added.
+ */
 export function nextId(layout: Layout, kind: ElementKind): string {
   const ids =
     kind === "ball"

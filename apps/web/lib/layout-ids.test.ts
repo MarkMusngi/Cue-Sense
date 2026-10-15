@@ -12,7 +12,7 @@ describe("nextId", () => {
     expect(nextId(layout, "annotation")).toBe("annotation_4");
   });
 
-  it("never reuses a removed id, so ids stay stable", () => {
+  it("does not reuse ids below the highest one", () => {
     const layout = sampleLayout();
     layout.object_balls = [{ id: "ball_7", x: 5, y: 2 }];
 

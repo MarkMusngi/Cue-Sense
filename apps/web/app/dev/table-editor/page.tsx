@@ -3,7 +3,7 @@
 import { useState } from "react";
 
 import { TableEditor } from "@/components/table-editor/table-editor";
-import type { Layout } from "@/lib/layout";
+import type { BallInHand, Layout } from "@/lib/layout";
 import { sampleLayout } from "@/lib/sample-layouts";
 
 // Dev-only preview of the table editor, for reviewing each build step.
@@ -15,6 +15,25 @@ export default function TableEditorPreviewPage() {
       <h1 className="text-2xl font-semibold">Table editor preview</h1>
       <section className="flex flex-col gap-2">
         <h2 className="text-lg font-medium">Editor</h2>
+        {/* Stands in for the drill form, which owns ball in hand (Prompt 7). */}
+        <label className="flex items-center gap-2 text-sm">
+          Ball in hand
+          <select
+            className="rounded border border-neutral-300 px-2 py-1 dark:border-neutral-700 dark:bg-neutral-900"
+            value={layout.cue_ball.ball_in_hand}
+            onChange={(event) =>
+              setLayout({
+                ...layout,
+                cue_ball: { ...layout.cue_ball, ball_in_hand: event.target.value as BallInHand },
+              })
+            }
+            data-testid="ball-in-hand"
+          >
+            <option value="none">None</option>
+            <option value="anywhere">Anywhere</option>
+            <option value="behind_head_string">Behind the head string</option>
+          </select>
+        </label>
         <TableEditor layout={layout} onChange={setLayout} />
       </section>
       <section className="flex flex-col gap-2">

@@ -29,6 +29,7 @@ import {
 } from "@/lib/annotation-edits";
 import {
   CUE_BALL_ID,
+  HEAD_STRING_X,
   MAX_OBJECT_BALLS,
   SNAP_STEP,
   type Layout,
@@ -94,6 +95,21 @@ type Drag = {
 
 // Clicking within this distance of the last point (diamonds) finishes a path.
 const FINISH_DISTANCE = 0.08;
+
+const NUDGE_KEYS: Record<string, [number, number]> = {
+  ArrowLeft: [-1, 0],
+  ArrowRight: [1, 0],
+  ArrowUp: [0, -1],
+  ArrowDown: [0, 1],
+};
+const FINE_NUDGE = 0.01;
+
+/** The cue ball in hand behind the head string must stay at x <= 2 (section 4.3). */
+function headStringLimit(layout: Layout, ballId: string): number | undefined {
+  return ballId === layout.cue_ball.id && layout.cue_ball.ball_in_hand === "behind_head_string"
+    ? HEAD_STRING_X
+    : undefined;
+}
 
 /**
  * SVG table layout editor in diamond units (docs/architecture.md section 4.8).
@@ -161,6 +177,8 @@ export function TableEditor({ layout, onChange, readOnly = false }: TableEditorP
       // The pointer is already gone; pointerup or cancel ends the drag anyway.
     }
     const pointer = toTablePoint(event);
+    // Read after focusTable: blurring an inspector input may have just saved an edit.
+    const latest = history.getPresent();
     setSelectedId(id);
     setDrag({
       pointerId: event.pointerId,
@@ -169,8 +187,8 @@ export function TableEditor({ layout, onChange, readOnly = false }: TableEditorP
       index,
       offset: { x: anchor.x - pointer.x, y: anchor.y - pointer.y },
       origin: pointer,
-      base: present,
-      draft: present,
+      base: latest,
+      draft: latest,
     });
   }
 
@@ -226,14 +244,16 @@ export function TableEditor({ layout, onChange, readOnly = false }: TableEditorP
         const pocket = nearestPocket(point);
         if (pocket) {
           const linked = selectedBall && selectedId !== CUE_BALL_ID ? selectedBall.id : undefined;
-          commitNew(addPocketTarget(present, pocket, linked), "target");
+          commitNew((latest) => addPocketTarget(latest, pocket, linked), "target");
         }
         break;
       }
       case "circle_zone":
-      case "rect_zone":
-        commitNew(addZone(present, tool === "circle_zone" ? "circle" : "rect", snap(point)), "target");
+      case "rect_zone": {
+        const shape = tool === "circle_zone" ? "circle" : "rect";
+        commitNew((latest) => addZone(latest, shape, snap(point)), "target");
         break;
+      }
       case "arrow":
       case "line":
         addPathPoint(tool, clampToTable(snap(point)));
@@ -242,7 +262,7 @@ export function TableEditor({ layout, onChange, readOnly = false }: TableEditorP
         // Keep the browser from moving focus back to the table after this pointerdown,
         // so the new note's text box keeps focus and typing replaces "Note".
         event.preventDefault();
-        commitNew(addTextAnnotation(present, snap(point)), "annotation");
+        commitNew((latest) => addTextAnnotation(latest, snap(point)), "annotation");
         break;
       default:
         setSelectedId(null);
@@ -250,8 +270,10 @@ export function TableEditor({ layout, onChange, readOnly = false }: TableEditorP
   }
 
   /** Commit a layout that gained one target or annotation, select it, and go back to Select. */
-  function commitNew(next: Layout, kind: "target" | "annotation") {
-    if (next === present) {
+  function commitNew(add: (latest: Layout) => Layout, kind: "target" | "annotation") {
+    const latest = history.getPresent();
+    const next = add(latest);
+    if (next === latest) {
       return;
     }
     history.commit(next);
@@ -276,13 +298,15 @@ export function TableEditor({ layout, onChange, readOnly = false }: TableEditorP
 
   function finishPath() {
     if (pending && pending.points.length >= 2) {
-      commitNew(addPathAnnotation(present, pending.kind, pending.points), "annotation");
+      const { kind, points } = pending;
+      commitNew((latest) => addPathAnnotation(latest, kind, points), "annotation");
     }
     setPending(null);
   }
 
   function addBallAt(point: Point) {
-    const others = otherBallPositions(present, "");
+    const latest = history.getPresent();
+    const others = otherBallPositions(latest, "");
     const placed = placeBall(point, others, radius, {
       isSnapping,
       fallback: clampToCushions(point, radius),
@@ -291,8 +315,8 @@ export function TableEditor({ layout, onChange, readOnly = false }: TableEditorP
     if (others.some((other) => ballsOverlap(placed, other, radius))) {
       return;
     }
-    const next = addObjectBall(present, placed);
-    if (next !== present) {
+    const next = addObjectBall(latest, placed);
+    if (next !== latest) {
       history.commit(next);
       setSelectedId(next.object_balls[next.object_balls.length - 1].id);
     }
@@ -302,14 +326,39 @@ export function TableEditor({ layout, onChange, readOnly = false }: TableEditorP
     if (!canDelete || !selectedId) {
       return;
     }
-    history.commit(
+    const id = selectedId;
+    history.commit((latest) =>
       selectedTarget
-        ? removeTarget(present, selectedId)
+        ? removeTarget(latest, id)
         : selectedAnnotation
-          ? removeAnnotation(present, selectedId)
-          : removeBall(present, selectedId),
+          ? removeAnnotation(latest, id)
+          : removeBall(latest, id),
     );
     setSelectedId(null);
+  }
+
+  /** Move the selection by a small step: arrow keys, for keyboard users. */
+  function nudgeSelected(dx: number, dy: number) {
+    const id = selectedId;
+    if (!id) {
+      return;
+    }
+    history.commit((latest) => {
+      const ball = findBall(latest, id);
+      if (ball) {
+        const placed = placeBall({ x: ball.x + dx, y: ball.y + dy }, otherBallPositions(latest, id), radius, {
+          isSnapping: false,
+          fallback: { x: ball.x, y: ball.y },
+          maxX: headStringLimit(latest, id),
+        });
+        return moveBall(latest, id, placed);
+      }
+      const target = findTarget(latest, id);
+      if (target?.kind === "zone") {
+        return moveZone(latest, id, { x: target.x + dx, y: target.y + dy });
+      }
+      return findAnnotation(latest, id) ? moveAnnotation(latest, id, { x: dx, y: dy }) : latest;
+    });
   }
 
   /** Undo, redo, reset or mirror: drop anything half-drawn, then change the layout. */
@@ -357,13 +406,13 @@ export function TableEditor({ layout, onChange, readOnly = false }: TableEditorP
         : "Not available: the cue ball is in hand behind the head string, and mirroring would move it past",
       testId: "mirror-horizontal",
       isDisabled: !canMirrorHorizontal(present),
-      onClick: () => travel(() => history.commit(mirrorHorizontal(present))),
+      onClick: () => travel(() => history.commit(mirrorHorizontal)),
     },
     {
       label: "Mirror V",
       title: "Mirror top to bottom (the long rails swap)",
       testId: "mirror-vertical",
-      onClick: () => travel(() => history.commit(mirrorVertical(present))),
+      onClick: () => travel(() => history.commit(mirrorVertical)),
     },
     {
       label: "Delete",
@@ -404,6 +453,7 @@ export function TableEditor({ layout, onChange, readOnly = false }: TableEditorP
         const placed = placeBall(moved, otherBallPositions(current.draft, current.id), radius, {
           isSnapping,
           fallback: { x: ball.x, y: ball.y },
+          maxX: headStringLimit(current.draft, current.id),
         });
         return moveBall(current.draft, current.id, placed);
       }
@@ -441,6 +491,12 @@ export function TableEditor({ layout, onChange, readOnly = false }: TableEditorP
       event.preventDefault();
       const isRedo = key === "y" || event.shiftKey;
       travel(isRedo ? history.redo : history.undo);
+    } else if (event.key in NUDGE_KEYS && selectedId && !pending && !drag) {
+      event.preventDefault();
+      const [dx, dy] = NUDGE_KEYS[event.key];
+      // Shift for a fine step; otherwise one grid step.
+      const step = event.shiftKey ? FINE_NUDGE : SNAP_STEP;
+      nudgeSelected(dx * step, dy * step);
     } else if (event.key === "Enter" && pending) {
       event.preventDefault();
       finishPath();
@@ -527,13 +583,13 @@ export function TableEditor({ layout, onChange, readOnly = false }: TableEditorP
         onFinishPath={finishPath}
         onCancelPath={() => setPending(null)}
         onTargetBallChange={(ballId) =>
-          selectedId && history.commit(setTargetBall(present, selectedId, ballId))
+          selectedId && history.commit((latest) => setTargetBall(latest, selectedId, ballId))
         }
         onZoneLabelChange={(label) =>
-          selectedId && history.commit(setZoneLabel(present, selectedId, label))
+          selectedId && history.commit((latest) => setZoneLabel(latest, selectedId, label))
         }
         onAnnotationTextChange={(value) =>
-          selectedId && history.commit(setAnnotationText(present, selectedId, value))
+          selectedId && history.commit((latest) => setAnnotationText(latest, selectedId, value))
         }
       />
       {table}

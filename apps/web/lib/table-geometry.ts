@@ -89,16 +89,25 @@ export function resolveOverlap(
   return insideCushions(pushed, radius) && !stillOverlaps ? pushed : fallback;
 }
 
-/** Where a dragged or dropped ball lands: snap, clamp, keep clear of other balls, round. */
+/**
+ * Where a dragged or dropped ball lands: snap, clamp, keep clear of other balls, round.
+ * maxX keeps the cue ball behind the head string when it is in hand there.
+ */
 export function placeBall(
   target: Point,
   others: Point[],
   radius: number,
-  options: { isSnapping: boolean; fallback: Point },
+  options: { isSnapping: boolean; fallback: Point; maxX?: number },
 ): Point {
   const snapped = options.isSnapping ? snapToGrid(target) : target;
   const clamped = clampToCushions(snapped, radius);
-  const placed = resolveOverlap(clamped, others, radius, options.fallback);
+  const limited =
+    options.maxX === undefined ? clamped : { ...clamped, x: Math.min(clamped.x, options.maxX) };
+  let placed = resolveOverlap(limited, others, radius, options.fallback);
+  // Pushing clear of another ball must not cross the limit either.
+  if (options.maxX !== undefined && placed.x > options.maxX + FLOAT_EPSILON) {
+    placed = options.fallback;
+  }
   return { x: roundToMillis(placed.x), y: roundToMillis(placed.y) };
 }
 
