@@ -8,8 +8,18 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.models import Drill, DrillRun, DrillVersion, User
+from app.services.layout_service import upgrade_layout
 from tests.conftest import check_deferred_constraints, make_client
-from tests.factories import LAYOUT, SCORING, make_run, make_session, make_tag, make_user
+from tests.factories import (
+    LAYOUT,
+    LAYOUT_V1,
+    SCORING,
+    make_drill,
+    make_run,
+    make_session,
+    make_tag,
+    make_user,
+)
 
 
 def drill_body(**overrides: Any) -> dict[str, Any]:
@@ -574,3 +584,103 @@ def test_versions_are_listed_newest_first_and_paginated(db_session: Session) -> 
     assert [v["version_number"] for v in page["items"]] == [3, 2]
     assert page["total"] == 3
     assert page["items"][0]["instructions"] == "Version 3."
+
+
+# Layouts saved before schema version 2 (ADR 0002, ADR 0008)
+
+
+def stored_layout(db: Session, version_id: str) -> dict[str, Any]:
+    version = db.get(DrillVersion, uuid.UUID(version_id))
+    assert version is not None
+    return version.layout
+
+
+def legacy_drill(db: Session, owner: User) -> dict[str, Any]:
+    drill = make_drill(db, owner, layout=copy.deepcopy(LAYOUT_V1))
+    response = make_client(db, owner).get(f"/drills/{drill.id}")
+    assert response.status_code == 200
+    result: dict[str, Any] = response.json()
+    return result
+
+
+def test_a_v1_drill_is_read_as_v2_and_its_stored_layout_is_untouched(db_session: Session) -> None:
+    drill = legacy_drill(db_session, make_user(db_session))
+
+    layout = drill["current_version"]["layout"]
+
+    assert layout == upgrade_layout(LAYOUT_V1)
+    assert layout["schema_version"] == 2
+    assert stored_layout(db_session, drill["current_version"]["id"]) == LAYOUT_V1
+
+
+def test_version_history_reads_v1_versions_as_v2(db_session: Session) -> None:
+    owner = make_user(db_session)
+    drill = legacy_drill(db_session, owner)
+
+    page = make_client(db_session, owner).get(f"/drills/{drill['id']}/versions").json()
+
+    assert [item["layout"]["schema_version"] for item in page["items"]] == [2]
+
+
+def test_saving_a_v1_drill_without_changes_creates_no_version(db_session: Session) -> None:
+    owner = make_user(db_session)
+    drill = legacy_drill(db_session, owner)
+
+    response = make_client(db_session, owner).put(
+        f"/drills/{drill['id']}", json=update_body(drill, title="Renamed")
+    )
+
+    assert response.status_code == 200
+    assert response.json()["current_version"]["id"] == drill["current_version"]["id"]
+    assert version_count(db_session, drill["id"]) == 1
+
+
+def test_editing_a_v1_drill_adds_a_v2_version_and_keeps_the_v1_one(db_session: Session) -> None:
+    owner = make_user(db_session)
+    drill = legacy_drill(db_session, owner)
+
+    response = make_client(db_session, owner).put(
+        f"/drills/{drill['id']}", json=update_body(drill, instructions="Version 2.")
+    )
+
+    assert response.status_code == 200
+    assert version_count(db_session, drill["id"]) == 2
+    new_version = response.json()["current_version"]
+    assert stored_layout(db_session, new_version["id"])["schema_version"] == 2
+    assert stored_layout(db_session, drill["current_version"]["id"]) == LAYOUT_V1
+
+
+def test_duplicating_a_v1_drill_stores_a_v2_layout(db_session: Session) -> None:
+    owner = make_user(db_session)
+    source = legacy_drill(db_session, owner)
+
+    response = make_client(db_session, owner).post(
+        "/drills", json={"source_drill_id": source["id"]}
+    )
+
+    assert response.status_code == 201
+    version = response.json()["current_version"]
+    assert version["layout"] == upgrade_layout(LAYOUT_V1)
+    assert stored_layout(db_session, version["id"]) == upgrade_layout(LAYOUT_V1)
+
+
+def test_a_v1_layout_cannot_be_written(db_session: Session) -> None:
+    owner = make_user(db_session)
+
+    response = make_client(db_session, owner).post(
+        "/drills", json=drill_body(layout=copy.deepcopy(LAYOUT_V1))
+    )
+
+    assert response.status_code == 422
+    assert ("schema_invalid", ["layout", "cue_ball", "ball_in_hand"]) in error_pairs(response)
+
+
+def test_a_layout_with_an_old_schema_version_cannot_be_written(db_session: Session) -> None:
+    owner = make_user(db_session)
+    layout = copy.deepcopy(LAYOUT)
+    layout["schema_version"] = 1
+
+    response = make_client(db_session, owner).post("/drills", json=drill_body(layout=layout))
+
+    assert response.status_code == 422
+    assert error_pairs(response) == [("unsupported_schema_version", ["layout", "schema_version"])]

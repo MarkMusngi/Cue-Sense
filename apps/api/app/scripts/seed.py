@@ -39,28 +39,17 @@ SEED_DRILLS: tuple[SeedDrill, ...] = (
         description="Straight-in shot into the corner from short, medium and long range.",
         difficulty=1,
         instructions=(
-            "Shoot the 1 ball straight into the bottom-right corner. Take 3 attempts with the "
-            "cue ball on each mark: short, then medium, then long. Respot after every attempt."
+            "Shoot the 1 ball straight into the bottom-right corner. The cue ball starts where "
+            "shown (short range). Take 3 attempts there, then move the cue ball back along the "
+            "same line one diamond for medium range and one more for long range, 3 attempts "
+            "each. Respot after every attempt."
         ),
         layout={
-            "schema_version": 1,
+            "schema_version": 2,
             "table": TABLE,
-            "cue_ball": {"id": "ball_0", "x": 6.6, "y": 2.6, "ball_in_hand": "none"},
-            "object_balls": [{"id": "ball_1", "number": 1, "x": 7.2, "y": 3.2}],
-            "targets": [
-                {"id": "target_1", "kind": "pocket", "pocket": "bottom_right", "ball_id": "ball_1"}
-            ],
-            "annotations": [
-                {
-                    "id": "annotation_1",
-                    "kind": "line",
-                    "points": [{"x": 4.6, "y": 0.6}, {"x": 8.0, "y": 4.0}],
-                    "label": "Shot line",
-                },
-                {"id": "annotation_2", "kind": "text", "x": 6.6, "y": 2.3, "text": "Short"},
-                {"id": "annotation_3", "kind": "text", "x": 5.6, "y": 1.3, "text": "Medium"},
-                {"id": "annotation_4", "kind": "text", "x": 4.6, "y": 0.3, "text": "Long"},
-            ],
+            "cue_ball": {"id": "ball_0", "x": 6.6, "y": 2.6},
+            "object_balls": [{"id": "ball_1", "x": 7.2, "y": 3.2}],
+            "target_pocket": "bottom_right",
         },
         scoring={
             "schema_version": 1,
@@ -79,28 +68,11 @@ SEED_DRILLS: tuple[SeedDrill, ...] = (
             "meets the object ball path at 30 degrees. Center ball, medium speed."
         ),
         layout={
-            "schema_version": 1,
+            "schema_version": 2,
             "table": TABLE,
-            # The ghost ball is at (5.873, 2.127): two radii back from the foot spot along
-            # the pocket line. The cue ball is 2 diamonds back on a line 30 degrees off it.
-            "cue_ball": {"id": "ball_0", "x": 3.941, "y": 2.645, "ball_in_hand": "none"},
-            "object_balls": [{"id": "ball_1", "number": 1, "x": 6.0, "y": 2.0}],
-            "targets": [
-                {"id": "target_1", "kind": "pocket", "pocket": "top_right", "ball_id": "ball_1"}
-            ],
-            "annotations": [
-                {
-                    "id": "annotation_1",
-                    "kind": "arrow",
-                    "points": [{"x": 3.941, "y": 2.645}, {"x": 5.873, "y": 2.127}],
-                    "label": "Aim at the ghost ball",
-                },
-                {
-                    "id": "annotation_2",
-                    "kind": "line",
-                    "points": [{"x": 6.0, "y": 2.0}, {"x": 8.0, "y": 0.0}],
-                },
-            ],
+            "cue_ball": {"id": "ball_0", "x": 3.941, "y": 2.645},
+            "object_balls": [{"id": "ball_1", "x": 6.0, "y": 2.0}],
+            "target_pocket": "top_right",
         },
         scoring={
             "schema_version": 1,
@@ -116,35 +88,15 @@ SEED_DRILLS: tuple[SeedDrill, ...] = (
         difficulty=2,
         instructions=(
             "Shoot the 1 ball straight into the top side pocket with a stop shot. It counts "
-            "only if the cue ball stops inside the circle where the 1 ball was."
+            "only if the cue ball stops inside the landing zone, where the 1 ball was."
         ),
         layout={
-            "schema_version": 1,
+            "schema_version": 2,
             "table": TABLE,
-            "cue_ball": {"id": "ball_0", "x": 4.0, "y": 2.6, "ball_in_hand": "none"},
-            "object_balls": [{"id": "ball_1", "number": 1, "x": 4.0, "y": 1.0}],
-            "targets": [
-                {"id": "target_1", "kind": "pocket", "pocket": "top_middle", "ball_id": "ball_1"},
-                {
-                    "id": "target_2",
-                    "kind": "zone",
-                    "shape": "circle",
-                    "ball_id": "ball_0",
-                    "x": 4.0,
-                    "y": 1.0,
-                    "radius": 0.2,
-                    "label": "Cue ball stops here",
-                },
-            ],
-            "annotations": [
-                {
-                    "id": "annotation_1",
-                    "kind": "text",
-                    "x": 4.5,
-                    "y": 2.6,
-                    "text": "Below center, no side spin",
-                },
-            ],
+            "cue_ball": {"id": "ball_0", "x": 4.0, "y": 2.6},
+            "object_balls": [{"id": "ball_1", "x": 4.0, "y": 1.0}],
+            "landing_zone": {"x": 4.0, "y": 1.0},
+            "target_pocket": "top_middle",
         },
         scoring={"schema_version": 1, "kind": "streak", "streak_length": 5},
     ),
@@ -154,30 +106,17 @@ SEED_DRILLS: tuple[SeedDrill, ...] = (
         description="Pocket the ball and bring the cue ball to the middle of the table.",
         difficulty=3,
         instructions=(
-            "Pocket the 1 ball in the top-right corner and leave the cue ball in the center "
-            "box. Score 3 if pocketed with the cue ball in the box, 1 if pocketed with the "
-            "cue ball outside it, 0 if missed."
+            "Pocket the 1 ball in the top-right corner and leave the cue ball inside the "
+            "landing zone. Score 3 if pocketed with the cue ball in the zone, 1 if pocketed "
+            "with the cue ball outside it, 0 if missed."
         ),
         layout={
-            "schema_version": 1,
+            "schema_version": 2,
             "table": TABLE,
-            "cue_ball": {"id": "ball_0", "x": 5.0, "y": 2.0, "ball_in_hand": "none"},
-            "object_balls": [{"id": "ball_1", "number": 1, "x": 6.8, "y": 0.8}],
-            "targets": [
-                {"id": "target_1", "kind": "pocket", "pocket": "top_right", "ball_id": "ball_1"},
-                {
-                    "id": "target_2",
-                    "kind": "zone",
-                    "shape": "rect",
-                    "ball_id": "ball_0",
-                    "x": 3.5,
-                    "y": 1.5,
-                    "width": 1.0,
-                    "height": 1.0,
-                    "label": "Center box",
-                },
-            ],
-            "annotations": [],
+            "cue_ball": {"id": "ball_0", "x": 5.0, "y": 2.0},
+            "object_balls": [{"id": "ball_1", "x": 6.8, "y": 0.8}],
+            "landing_zone": {"x": 4.0, "y": 2.0},
+            "target_pocket": "top_right",
         },
         scoring={
             "schema_version": 1,
@@ -198,25 +137,15 @@ SEED_DRILLS: tuple[SeedDrill, ...] = (
             "within the time limit."
         ),
         layout={
-            "schema_version": 1,
+            "schema_version": 2,
             "table": TABLE,
-            "cue_ball": {"id": "ball_0", "x": 2.0, "y": 2.0, "ball_in_hand": "anywhere"},
+            "cue_ball": {"id": "ball_0", "x": 2.0, "y": 2.0},
             "object_balls": [
-                {"id": "ball_1", "number": 1, "x": 3.0, "y": 1.0},
-                {"id": "ball_2", "number": 2, "x": 5.0, "y": 3.0},
-                {"id": "ball_3", "number": 3, "x": 6.5, "y": 1.5},
-                {"id": "ball_4", "number": 4, "x": 2.5, "y": 3.2},
-                {"id": "ball_5", "number": 5, "x": 7.0, "y": 3.5},
-            ],
-            "targets": [],
-            "annotations": [
-                {
-                    "id": "annotation_1",
-                    "kind": "text",
-                    "x": 1.0,
-                    "y": 0.5,
-                    "text": "Ball in hand, shoot in order",
-                },
+                {"id": "ball_1", "x": 3.0, "y": 1.0},
+                {"id": "ball_2", "x": 5.0, "y": 3.0},
+                {"id": "ball_3", "x": 6.5, "y": 1.5},
+                {"id": "ball_4", "x": 2.5, "y": 3.2},
+                {"id": "ball_5", "x": 7.0, "y": 3.5},
             ],
         },
         scoring={
@@ -255,8 +184,10 @@ def seed_drills(db: Session, owner: User) -> list[Drill]:
 
 
 def _create_seed_drill(db: Session, owner: User, seed: SeedDrill) -> Drill:
-    # require_layout raises if a seed layout is invalid, so a bad seed fails loudly.
-    layout = validate_layout(seed.layout).require_layout()
+    result = validate_layout(seed.layout)
+    if not result.is_valid:
+        raise ValueError(f"Seed drill {seed.slug!r} has an invalid layout: {result.errors}")
+    layout = result.require_layout()
     drill = Drill(
         owner_id=owner.id,
         title=seed.title,

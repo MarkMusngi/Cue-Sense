@@ -1,9 +1,22 @@
+import copy
+import json
+from dataclasses import replace
+from pathlib import Path
+
+import pytest
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.models import Drill, DrillVersion, User
-from app.scripts.seed import DEV_USER_EMAIL, SEED_DRILLS, seed_dev_user, seed_drills
-from app.services.layout_service import validate_layout
+from app.scripts.seed import (
+    DEV_USER_EMAIL,
+    SEED_DRILLS,
+    SeedDrill,
+    _create_seed_drill,
+    seed_dev_user,
+    seed_drills,
+)
+from app.services.layout_service import upgrade_layout, validate_layout
 
 SEED_SLUGS = {
     "straight-in-three-distances",
@@ -13,6 +26,7 @@ SEED_SLUGS = {
     "five-ball-run-out",
 }
 SCORING_KINDS = {"success_count", "streak", "points", "timed"}
+FIXTURES = Path(__file__).resolve().parent / "fixtures"
 
 
 def count_owned(db: Session, model: type[Drill] | type[DrillVersion], owner: User) -> int:
@@ -66,6 +80,7 @@ def test_every_seeded_layout_and_scoring_is_valid(db_session: Session) -> None:
         assert result.errors == [], drill.slug
         # The stored layout is the normalized one, so validating it changes nothing.
         assert result.require_layout().model_dump(mode="json", exclude_none=True) == version.layout
+        assert version.layout["schema_version"] == 2
         assert version.scoring["schema_version"] == 1
         assert version.scoring["kind"] in SCORING_KINDS
 
@@ -85,3 +100,22 @@ def test_seed_drills_rerun_is_a_noop(db_session: Session) -> None:
     }
     assert count_owned(db_session, Drill, user) == 5
     assert count_owned(db_session, DrillVersion, user) == 5
+
+
+@pytest.mark.parametrize("seed", SEED_DRILLS, ids=lambda seed: seed.slug)
+def test_seed_layouts_keep_what_the_original_schema_version_1_drills_had(seed: SeedDrill) -> None:
+    original = json.loads((FIXTURES / "seed_layouts_v1.json").read_text())[seed.slug]
+
+    assert seed.layout == upgrade_layout(original)
+
+
+def test_a_seed_with_an_invalid_layout_names_the_drill_and_the_errors(
+    db_session: Session,
+) -> None:
+    user = seed_dev_user(db_session)
+    layout = copy.deepcopy(SEED_DRILLS[0].layout)
+    layout["cue_ball"]["x"] = 0.0
+    broken = replace(SEED_DRILLS[0], slug="broken-seed", layout=layout)
+
+    with pytest.raises(ValueError, match=r"broken-seed.*ball_out_of_bounds"):
+        _create_seed_drill(db_session, user, broken)
