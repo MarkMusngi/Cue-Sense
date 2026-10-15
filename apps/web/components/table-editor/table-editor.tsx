@@ -44,8 +44,11 @@ import {
 import {
   ballRadius,
   ballsOverlap,
+  canMirrorHorizontal,
   clampToCushions,
   clampToTable,
+  mirrorHorizontal,
+  mirrorVertical,
   placeBall,
   snapToGrid,
 } from "@/lib/table-geometry";
@@ -297,7 +300,7 @@ export function TableEditor({ layout, onChange, readOnly = false }: TableEditorP
     setSelectedId(null);
   }
 
-  /** Undo, redo or reset: drop anything half-drawn, then move through the history. */
+  /** Undo, redo, reset or mirror: drop anything half-drawn, then change the layout. */
   function travel(move: () => void) {
     if (drag) {
       return;
@@ -334,6 +337,21 @@ export function TableEditor({ layout, onChange, readOnly = false }: TableEditorP
       testId: "reset",
       isDisabled: !history.canReset,
       onClick: () => travel(history.reset),
+    },
+    {
+      label: "Mirror H",
+      title: canMirrorHorizontal(present)
+        ? "Mirror left to right (head and foot swap)"
+        : "Not available: the cue ball is in hand behind the head string, and mirroring would move it past",
+      testId: "mirror-horizontal",
+      isDisabled: !canMirrorHorizontal(present),
+      onClick: () => travel(() => history.commit(mirrorHorizontal(present))),
+    },
+    {
+      label: "Mirror V",
+      title: "Mirror top to bottom (the long rails swap)",
+      testId: "mirror-vertical",
+      onClick: () => travel(() => history.commit(mirrorVertical(present))),
     },
     {
       label: "Delete",
