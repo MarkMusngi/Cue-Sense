@@ -24,3 +24,4 @@ Short records of decisions that deviate from, or add to, `docs/architecture.md`.
 | [0004](0004-drop-attempts-observations.md) | Drop `attempts.observations` | Proposed |
 | [0005](0005-role-foreign-keys-and-kind-discriminator.md) | Role-prefixed foreign keys and `kind` as the discriminator key | Proposed |
 | [0006](0006-nine-foot-table-only.md) | 9 ft table only | Accepted |
+| [0007](0007-uuid-primary-keys.md) | uuid primary keys | Accepted |

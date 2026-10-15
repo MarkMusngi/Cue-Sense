@@ -165,7 +165,7 @@ drill_versions(id, owner_id, drill_id, version_number, instructions,
                -- (owner_id, drill_id) -> drills(owner_id, id)
 
 tags(id, owner_id, name, category [skill|custom], created_at)
-               -- unique(owner_id, id), unique(owner_id, name)
+               -- unique(owner_id, id), unique(owner_id, lower(name))
 drill_tags(owner_id, drill_id, tag_id)
                -- primary key (drill_id, tag_id)
                -- (owner_id, drill_id) -> drills, (owner_id, tag_id) -> tags
@@ -193,19 +193,26 @@ attempts(id, owner_id, drill_run_id, attempt_number,
 - Success rate, streaks and trends are derived with queries; computed totals are not stored.
 - `attempts.tapped_at` is the client's time of the tap, and `recorded_at` is the server's receipt time. Both are kept for aligning video later.
 - Timestamps are `timestamptz`.
+- Every `id` is a `uuid`. Python generates it on insert and the column defaults to `gen_random_uuid()` (ADR 0007).
+- Time order is checked: `ended_at >= started_at` on `practice_sessions` and `drill_runs`, and `voided_at >= recorded_at` on `attempts`.
+- The database enforces two rules the ORM cannot: `drill_versions` rows cannot be updated (trigger), and `drills.updated_at` is refreshed on every update (trigger).
 
 **Indexes:**
 - `drills(owner_id, status)`
+- `drill_runs(owner_id, started_at)`
 - `drill_runs(drill_id, started_at)`
 - `drill_runs(drill_version_id)`
 - `drill_runs(practice_session_id)`
 - `practice_sessions(owner_id, started_at)`
 - `attempts(drill_run_id)`
-- `drill_tags(tag_id)`
+- `attempts(owner_id, recorded_at) where voided_at is null`
+- `drills(source_drill_version_id) where source_drill_version_id is not null`
+- `drill_tags(owner_id, tag_id)`
 
 **Delete behaviour:**
 - Foreign keys never cascade-delete history.
 - `drill_tags` rows are links, not history: deleting a tag or a draft drill removes its links.
+- Hard-deleting a draft clears `source_drill_version_id` on drills copied from it (`ON DELETE SET NULL (source_drill_version_id)`); their `owner_id` is untouched.
 
 **Lifecycle rules:**
 
