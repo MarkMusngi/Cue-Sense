@@ -1,7 +1,7 @@
 """Pydantic models for the layout JSON (docs/architecture.md section 4.3).
 
-These models check shape and types only. Rules that span elements (bounds, overlaps,
-references, ids) live in app.services.layout_service.
+These models check shape, types and single-element values (such as zone sizes). Rules
+that span elements (bounds, overlaps, references, ids) live in app.services.layout_service.
 """
 
 from typing import Annotated, Literal, Self
@@ -21,8 +21,26 @@ PocketName = Literal[
 ]
 
 
+LayoutErrorCode = Literal[
+    "schema_invalid",
+    "unsupported_schema_version",
+    "invalid_id",
+    "duplicate_id",
+    "too_many_object_balls",
+    "duplicate_ball_number",
+    "ball_out_of_bounds",
+    "balls_overlap",
+    "cue_ball_not_behind_head_string",
+    "unknown_ball_reference",
+    "pocket_target_cue_ball",
+    "position_out_of_bounds",
+    "too_many_annotations",
+]
+
+
 class LayoutModel(BaseModel):
-    model_config = ConfigDict(extra="forbid", strict=True, allow_inf_nan=False)
+    # Frozen so a validated layout cannot be edited past the cross-element rules.
+    model_config = ConfigDict(extra="forbid", strict=True, allow_inf_nan=False, frozen=True)
 
 
 class Point(LayoutModel):
@@ -127,6 +145,6 @@ class DrillLayout(LayoutModel):
 class LayoutError(BaseModel):
     """One validation failure. path follows the input JSON, for example ["object_balls", 2]."""
 
-    code: str
+    code: LayoutErrorCode
     message: str
     path: list[str | int]

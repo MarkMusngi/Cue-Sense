@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+from pydantic import ValidationError
 
 from app.services import layout_service
 from app.services.layout_service import LayoutValidationResult, ball_radius, validate_layout
@@ -250,7 +251,9 @@ def test_sixteen_object_balls_fail() -> None:
         ("object_balls", "ball_01"),
         ("object_balls", "Ball_1"),
         ("object_balls", "ball_0"),
+        ("object_balls", "ball_1x"),
         ("targets", "target_0"),
+        ("targets", "target_1 "),
         ("annotations", "note_1"),
     ],
 )
@@ -349,12 +352,42 @@ def test_pocket_target_without_a_ball_passes() -> None:
     assert_valid(data)
 
 
-def test_rect_zone_spilling_off_the_table_fails() -> None:
+@pytest.mark.parametrize(
+    "rect",
+    [
+        {"x": 7.5, "width": 1.0},  # past the foot rail
+        {"y": 3.5, "height": 1.0},  # past the bottom rail
+        {"x": -0.1},  # past the head rail
+        {"y": -0.1},  # past the top rail
+    ],
+)
+def test_rect_zone_spilling_off_the_table_fails(rect: dict[str, float]) -> None:
     data = base_layout()
-    data["targets"][2]["x"] = 7.5
-    data["targets"][2]["width"] = 1.0
+    data["targets"][2].update(rect)
 
     assert_error(data, "position_out_of_bounds", ["targets", 2])
+
+
+@pytest.mark.parametrize(
+    "rect",
+    [
+        {"x": 0.0, "y": 0.0, "width": 1.0, "height": 1.0},  # from the top-left corner
+        {"x": 6.0, "y": 3.0, "width": 2.0, "height": 1.0},  # to the bottom-right corner
+    ],
+)
+def test_rect_zone_exactly_on_the_table_edge_passes(rect: dict[str, float]) -> None:
+    data = base_layout()
+    data["targets"][2].update(rect)
+
+    assert_valid(data)
+
+
+@pytest.mark.parametrize(("x", "y"), [(0.0, 0.0), (8.0, 4.0)])
+def test_text_annotation_exactly_on_the_table_edge_passes(x: float, y: float) -> None:
+    data = base_layout()
+    data["annotations"][2].update({"x": x, "y": y})
+
+    assert_valid(data)
 
 
 def test_circle_zone_centre_off_the_table_fails() -> None:
@@ -393,9 +426,41 @@ def _unknown_target_kind(data: Layout) -> None:
     data["targets"][0]["kind"] = "triangle"
 
 
+def _set_target(index: int, **fields: Any) -> Callable[[Layout], None]:
+    def mutate(data: Layout) -> None:
+        data["targets"][index].update(fields)
+
+    return mutate
+
+
+def _drop_rect_height(data: Layout) -> None:
+    del data["targets"][2]["height"]
+
+
 @pytest.mark.parametrize(
     ("mutate", "index"),
-    [(_drop_circle_radius, 1), (_add_radius_to_rect, 2), (_unknown_target_kind, 0)],
+    [
+        (_drop_circle_radius, 1),
+        (_set_target(1, radius=0.0), 1),
+        (_set_target(1, radius=0.0004), 1),  # rounds to 0
+        (_set_target(1, width=1.0), 1),
+        (_add_radius_to_rect, 2),
+        (_set_target(2, width=0.0), 2),
+        (_set_target(2, height=-1.0), 2),
+        (_drop_rect_height, 2),
+        (_unknown_target_kind, 0),
+    ],
+    ids=[
+        "circle_without_radius",
+        "circle_zero_radius",
+        "circle_radius_rounds_to_zero",
+        "circle_with_width",
+        "rect_with_radius",
+        "rect_zero_width",
+        "rect_negative_height",
+        "rect_without_height",
+        "unknown_kind",
+    ],
 )
 def test_bad_targets_point_at_the_target(mutate: Callable[[Layout], None], index: int) -> None:
     data = base_layout()
@@ -528,6 +593,64 @@ def test_several_problems_are_all_returned_in_contract_order() -> None:
         ("unknown_ball_reference", ["targets", 0, "ball_id"]),
         ("position_out_of_bounds", ["annotations", 2]),
     ]
+
+
+def test_remaining_rules_are_returned_in_contract_order() -> None:
+    data = base_layout()
+    data["cue_ball"].update({"ball_in_hand": "behind_head_string", "x": 2.05})
+    data["object_balls"] = _ball_grid(16)
+    data["object_balls"][1]["id"] = "ball_1"
+    data["object_balls"][2]["number"] = 5
+    data["object_balls"][3]["number"] = 5
+    data["targets"][0]["ball_id"] = "ball_0"
+    data["annotations"] = [text_annotation(n) for n in range(1, 22)]
+    data["annotations"][0]["id"] = "note_1"
+
+    result = validate_layout(data)
+
+    assert error_pairs(result) == [
+        ("invalid_id", ["annotations", 0, "id"]),
+        ("duplicate_id", ["object_balls", 1, "id"]),
+        ("too_many_object_balls", ["object_balls"]),
+        ("duplicate_ball_number", ["object_balls", 3, "number"]),
+        ("cue_ball_not_behind_head_string", ["cue_ball", "x"]),
+        ("pocket_target_cue_ball", ["targets", 0, "ball_id"]),
+        ("too_many_annotations", ["annotations"]),
+    ]
+
+
+# Result and model guarantees
+
+
+def test_require_layout_returns_the_valid_layout() -> None:
+    result = validate_layout(base_layout())
+
+    assert result.require_layout() is result.layout
+
+
+def test_require_layout_raises_when_invalid() -> None:
+    data = base_layout()
+    data["schema_version"] = 2
+
+    with pytest.raises(ValueError):
+        validate_layout(data).require_layout()
+
+
+def test_result_cannot_have_both_or_neither_layout_and_errors() -> None:
+    valid = validate_layout(base_layout())
+    invalid = validate_layout({})
+
+    with pytest.raises(ValidationError):
+        LayoutValidationResult(layout=None, errors=[])
+    with pytest.raises(ValidationError):
+        LayoutValidationResult(layout=valid.layout, errors=invalid.errors)
+
+
+def test_validated_layout_is_frozen() -> None:
+    layout = validate_layout(base_layout()).require_layout()
+
+    with pytest.raises(ValidationError):
+        layout.cue_ball.x = 5.0  # type: ignore[misc]
 
 
 def test_input_is_not_mutated() -> None:

@@ -3,8 +3,9 @@
 import math
 import re
 from collections.abc import Iterator
+from typing import Self
 
-from pydantic import BaseModel, ValidationError
+from pydantic import BaseModel, ValidationError, model_validator
 from pydantic_core import ErrorDetails
 
 from app.schemas.layout import (
@@ -30,13 +31,16 @@ TABLE_WIDTH = 4.0
 HEAD_STRING_X = 2.0
 CUE_BALL_ID = "ball_0"
 
+_CUE_BALL_ID = re.compile(re.escape(CUE_BALL_ID))
 _OBJECT_BALL_ID = re.compile(r"ball_[1-9][0-9]*")
 _TARGET_ID = re.compile(r"target_[1-9][0-9]*")
 _ANNOTATION_ID = re.compile(r"annotation_[1-9][0-9]*")
+# Human-readable form of each id pattern, for error messages.
 _ID_FORMATS = {
-    _OBJECT_BALL_ID: "ball_<n>",
-    _TARGET_ID: "target_<n>",
-    _ANNOTATION_ID: "annotation_<n>",
+    _CUE_BALL_ID: CUE_BALL_ID,
+    _OBJECT_BALL_ID: "ball_<n> with n >= 1",
+    _TARGET_ID: "target_<n> with n >= 1",
+    _ANNOTATION_ID: "annotation_<n> with n >= 1",
 }
 
 # Absorbs float error so values exactly on a boundary pass (0.09 - 0.002 != 0.088).
@@ -49,12 +53,26 @@ ErrorPath = list[str | int]
 
 
 class LayoutValidationResult(BaseModel):
+    """Either a validated layout and no errors, or no layout and at least one error."""
+
     layout: DrillLayout | None
     errors: list[LayoutError]
+
+    @model_validator(mode="after")
+    def _check_consistent(self) -> Self:
+        if (self.layout is None) != bool(self.errors):
+            raise ValueError("A result has a layout or errors, never both or neither.")
+        return self
 
     @property
     def is_valid(self) -> bool:
         return not self.errors
+
+    def require_layout(self) -> DrillLayout:
+        """Return the validated layout, or raise ValueError if validation failed."""
+        if self.layout is None:
+            raise ValueError("The layout is invalid; check errors before using it.")
+        return self.layout
 
 
 def ball_radius(size_ft: int) -> float:
@@ -64,7 +82,10 @@ def ball_radius(size_ft: int) -> float:
 
 
 def validate_layout(data: object) -> LayoutValidationResult:
-    """Validate a layout for writing and return the normalized layout or every error.
+    """Validate a layout for writing and return the normalized layout or its errors.
+
+    If the shape is invalid, only schema_invalid errors are returned, because the other
+    rules need a well-formed layout. Otherwise every rule runs and all errors are returned.
 
     Writes only: per ADR 0002, stored layouts are never re-validated against newer rules.
     Errors come in contract order: rules in the order below, elements in input order.
@@ -107,12 +128,13 @@ def _not_below(value: float, minimum: float, tolerance: float = 0.0) -> bool:
     return value >= minimum - tolerance - _FLOAT_EPSILON
 
 
-def _inside_table(x: float, y: float) -> bool:
+def _inside_table(x: float, y: float, margin: float = 0.0, tolerance: float = 0.0) -> bool:
+    """(x, y) is at least margin from every rail, allowing the tolerance."""
     return (
-        _not_below(x, 0.0)
-        and _not_below(TABLE_LENGTH - x, 0.0)
-        and _not_below(y, 0.0)
-        and _not_below(TABLE_WIDTH - y, 0.0)
+        _not_below(x - margin, 0.0, tolerance)
+        and _not_below(TABLE_LENGTH - x - margin, 0.0, tolerance)
+        and _not_below(y - margin, 0.0, tolerance)
+        and _not_below(TABLE_WIDTH - y - margin, 0.0, tolerance)
     )
 
 
@@ -122,10 +144,10 @@ def _balls(layout: DrillLayout) -> list[tuple[ErrorPath, CueBall | ObjectBall]]:
     return balls
 
 
-def _ids(layout: DrillLayout) -> list[tuple[ErrorPath, str, re.Pattern[str] | None]]:
-    """Every element id with its path and required pattern (None means exactly ball_0)."""
-    ids: list[tuple[ErrorPath, str, re.Pattern[str] | None]] = [
-        (["cue_ball", "id"], layout.cue_ball.id, None)
+def _ids(layout: DrillLayout) -> list[tuple[ErrorPath, str, re.Pattern[str]]]:
+    """Every element id with its path and required pattern."""
+    ids: list[tuple[ErrorPath, str, re.Pattern[str]]] = [
+        (["cue_ball", "id"], layout.cue_ball.id, _CUE_BALL_ID)
     ]
     ids.extend(
         (["object_balls", i, "id"], ball.id, _OBJECT_BALL_ID)
@@ -152,12 +174,10 @@ def _check_schema_version(layout: DrillLayout) -> Iterator[LayoutError]:
 
 def _check_id_formats(layout: DrillLayout) -> Iterator[LayoutError]:
     for path, element_id, pattern in _ids(layout):
-        valid = element_id == CUE_BALL_ID if pattern is None else pattern.fullmatch(element_id)
-        if not valid:
-            expected = CUE_BALL_ID if pattern is None else f"{_ID_FORMATS[pattern]} with n >= 1"
+        if not pattern.fullmatch(element_id):
             yield LayoutError(
                 code="invalid_id",
-                message=f"Id '{element_id}' must be {expected}.",
+                message=f"Id '{element_id}' must be {_ID_FORMATS[pattern]}.",
                 path=path,
             )
 
@@ -198,13 +218,7 @@ def _check_duplicate_numbers(layout: DrillLayout) -> Iterator[LayoutError]:
 def _check_ball_bounds(layout: DrillLayout) -> Iterator[LayoutError]:
     radius = ball_radius(layout.table.size_ft)
     for path, ball in _balls(layout):
-        inside = (
-            _not_below(ball.x - radius, 0.0, POSITION_TOLERANCE)
-            and _not_below(TABLE_LENGTH - ball.x - radius, 0.0, POSITION_TOLERANCE)
-            and _not_below(ball.y - radius, 0.0, POSITION_TOLERANCE)
-            and _not_below(TABLE_WIDTH - ball.y - radius, 0.0, POSITION_TOLERANCE)
-        )
-        if not inside:
+        if not _inside_table(ball.x, ball.y, margin=radius, tolerance=POSITION_TOLERANCE):
             yield LayoutError(
                 code="ball_out_of_bounds",
                 message=f"Ball '{ball.id}' is not fully inside the cushions.",
