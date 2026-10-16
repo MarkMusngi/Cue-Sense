@@ -1,0 +1,273 @@
+{
+  "straight-in-three-distances": {
+    "schema_version": 1,
+    "table": {
+      "kind": "pool",
+      "size_ft": 9
+    },
+    "cue_ball": {
+      "id": "ball_0",
+      "x": 6.6,
+      "y": 2.6,
+      "ball_in_hand": "none"
+    },
+    "object_balls": [
+      {
+        "id": "ball_1",
+        "number": 1,
+        "x": 7.2,
+        "y": 3.2
+      }
+    ],
+    "targets": [
+      {
+        "id": "target_1",
+        "kind": "pocket",
+        "pocket": "bottom_right",
+        "ball_id": "ball_1"
+      }
+    ],
+    "annotations": [
+      {
+        "id": "annotation_1",
+        "kind": "line",
+        "points": [
+          {
+            "x": 4.6,
+            "y": 0.6
+          },
+          {
+            "x": 8.0,
+            "y": 4.0
+          }
+        ],
+        "label": "Shot line"
+      },
+      {
+        "id": "annotation_2",
+        "kind": "text",
+        "x": 6.6,
+        "y": 2.3,
+        "text": "Short"
+      },
+      {
+        "id": "annotation_3",
+        "kind": "text",
+        "x": 5.6,
+        "y": 1.3,
+        "text": "Medium"
+      },
+      {
+        "id": "annotation_4",
+        "kind": "text",
+        "x": 4.6,
+        "y": 0.3,
+        "text": "Long"
+      }
+    ]
+  },
+  "thirty-degree-cut": {
+    "schema_version": 1,
+    "table": {
+      "kind": "pool",
+      "size_ft": 9
+    },
+    "cue_ball": {
+      "id": "ball_0",
+      "x": 3.941,
+      "y": 2.645,
+      "ball_in_hand": "none"
+    },
+    "object_balls": [
+      {
+        "id": "ball_1",
+        "number": 1,
+        "x": 6.0,
+        "y": 2.0
+      }
+    ],
+    "targets": [
+      {
+        "id": "target_1",
+        "kind": "pocket",
+        "pocket": "top_right",
+        "ball_id": "ball_1"
+      }
+    ],
+    "annotations": [
+      {
+        "id": "annotation_1",
+        "kind": "arrow",
+        "points": [
+          {
+            "x": 3.941,
+            "y": 2.645
+          },
+          {
+            "x": 5.873,
+            "y": 2.127
+          }
+        ],
+        "label": "Aim at the ghost ball"
+      },
+      {
+        "id": "annotation_2",
+        "kind": "line",
+        "points": [
+          {
+            "x": 6.0,
+            "y": 2.0
+          },
+          {
+            "x": 8.0,
+            "y": 0.0
+          }
+        ]
+      }
+    ]
+  },
+  "stop-shot": {
+    "schema_version": 1,
+    "table": {
+      "kind": "pool",
+      "size_ft": 9
+    },
+    "cue_ball": {
+      "id": "ball_0",
+      "x": 4.0,
+      "y": 2.6,
+      "ball_in_hand": "none"
+    },
+    "object_balls": [
+      {
+        "id": "ball_1",
+        "number": 1,
+        "x": 4.0,
+        "y": 1.0
+      }
+    ],
+    "targets": [
+      {
+        "id": "target_1",
+        "kind": "pocket",
+        "pocket": "top_middle",
+        "ball_id": "ball_1"
+      },
+      {
+        "id": "target_2",
+        "kind": "zone",
+        "shape": "circle",
+        "ball_id": "ball_0",
+        "x": 4.0,
+        "y": 1.0,
+        "radius": 0.2,
+        "label": "Cue ball stops here"
+      }
+    ],
+    "annotations": [
+      {
+        "id": "annotation_1",
+        "kind": "text",
+        "x": 4.5,
+        "y": 2.6,
+        "text": "Below center, no side spin"
+      }
+    ]
+  },
+  "position-to-zone": {
+    "schema_version": 1,
+    "table": {
+      "kind": "pool",
+      "size_ft": 9
+    },
+    "cue_ball": {
+      "id": "ball_0",
+      "x": 5.0,
+      "y": 2.0,
+      "ball_in_hand": "none"
+    },
+    "object_balls": [
+      {
+        "id": "ball_1",
+        "number": 1,
+        "x": 6.8,
+        "y": 0.8
+      }
+    ],
+    "targets": [
+      {
+        "id": "target_1",
+        "kind": "pocket",
+        "pocket": "top_right",
+        "ball_id": "ball_1"
+      },
+      {
+        "id": "target_2",
+        "kind": "zone",
+        "shape": "rect",
+        "ball_id": "ball_0",
+        "x": 3.5,
+        "y": 1.5,
+        "width": 1.0,
+        "height": 1.0,
+        "label": "Center box"
+      }
+    ],
+    "annotations": []
+  },
+  "five-ball-run-out": {
+    "schema_version": 1,
+    "table": {
+      "kind": "pool",
+      "size_ft": 9
+    },
+    "cue_ball": {
+      "id": "ball_0",
+      "x": 2.0,
+      "y": 2.0,
+      "ball_in_hand": "anywhere"
+    },
+    "object_balls": [
+      {
+        "id": "ball_1",
+        "number": 1,
+        "x": 3.0,
+        "y": 1.0
+      },
+      {
+        "id": "ball_2",
+        "number": 2,
+        "x": 5.0,
+        "y": 3.0
+      },
+      {
+        "id": "ball_3",
+        "number": 3,
+        "x": 6.5,
+        "y": 1.5
+      },
+      {
+        "id": "ball_4",
+        "number": 4,
+        "x": 2.5,
+        "y": 3.2
+      },
+      {
+        "id": "ball_5",
+        "number": 5,
+        "x": 7.0,
+        "y": 3.5
+      }
+    ],
+    "targets": [],
+    "annotations": [
+      {
+        "id": "annotation_1",
+        "kind": "text",
+        "x": 1.0,
+        "y": 0.5,
+        "text": "Ball in hand, shoot in order"
+      }
+    ]
+  }
+}
