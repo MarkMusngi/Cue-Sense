@@ -317,7 +317,13 @@ export function DrillEditor({ drill, tags: initialTags }: DrillEditorProps) {
                 selectedIds={form.tag_ids}
                 error={errorFor("tags")}
                 onChange={(tag_ids) => update({ tag_ids })}
-                onTagCreated={(tag) => setTags((current) => [...current, tag])}
+                onTagCreated={(tag) => {
+                  setTags((current) => [...current, tag]);
+                  // Add to the newest tag ids, not the ones from when Add tag was pressed.
+                  setForm((current) => ({ ...current, tag_ids: [...current.tag_ids, tag.id] }));
+                  setServerProblems([]);
+                  setSaveError(null);
+                }}
               />
             </Section>
           </div>
