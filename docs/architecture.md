@@ -137,6 +137,7 @@ Stored as JSONB on the drill version, discriminated by `kind`.
 - For `timed`, one attempt is one timed try, and `duration_ms` is required.
 - **Success rate** is `success` attempts divided by non-voided attempts; `partial` counts as not a success. It is defined once in the scoring service and used everywhere.
 - **Sets:** attempt N of a drill run (counting non-voided attempts in `attempt_number` order) belongs to set `ceil(N / attempts_per_set)`.
+- **Set progress:** the current set is the set of the latest non-voided attempt (set 1 before any). A full set stays current until the next attempt starts the following one. `set_passed` is `null` until the set is complete, then compares `successes` (`success_count`, `timed`) or total `points` (`points`) with `pass_threshold`. `streak` has no sets: the whole run is one set, `set_complete` and `set_passed` become true once `best_streak` reaches `streak_length`, and `partial` breaks a streak. `points` is `null` except for points scoring, and the streak fields are `null` except for streak scoring. The cases are in `fixtures/scoring/set-progress-cases.json`, shared by the API tests and the web app.
 
 ### 4.5 Database schema
 
@@ -260,7 +261,10 @@ POST   /practice-sessions/{id}/drill-runs   start a drill run (body: drill_id; s
 PATCH  /drill-runs/{id}                     end a drill run (ended_at), notes
 POST   /drill-runs/{id}/attempts            log one attempt (Idempotency-Key header required)
 PATCH  /attempts/{id}                       correct an attempt, or undo it (voided_at)
+GET    /drill-runs/{id}                     drill run detail, with set progress
 ```
+
+The `/stats` endpoints are planned in [stats-contract.md](stats-contract.md).
 
 Rules:
 - Pagination on every list: `limit` (default 20, at most 100) and `offset` query parameters. Lists return `{"items": [...], "total", "limit", "offset"}`.
@@ -287,7 +291,18 @@ Rules:
 | 409 | `duplicate_tag_name` | Tag names are unique per owner, ignoring case |
 | 422 | `validation_failed` | Details use `schema_invalid`, the layout codes, `unsupported_schema_version`, `pass_threshold_too_high` or `unknown_tag` |
 | 503 | `dev_user_missing` | The seed script has not created the dev user |
-- The `Idempotency-Key` header is a client-generated UUID stored as `attempts.idempotency_key`. A replay returns the original attempt, so a flaky phone connection cannot double-log an attempt.
+| 409 | `session_ended` | Starting a drill run or adding an attempt in an ended (or idle-closed) session, or finishing a finished one |
+| 409 | `drill_archived` | Starting a drill run on an archived drill |
+| 409 | `drill_run_ended` | Adding an attempt to, or ending, an ended drill run |
+| 409 | `idempotency_key_conflict` | An `Idempotency-Key` already used for a different drill run |
+| 409 | `session_conflict` | Two requests started a session at the same moment |
+| 422 | `validation_failed` | Attempt details also use `outcome_required`, `points_required`, `points_too_high`, `duration_required` and `ended_before_started`, `ended_in_future` and `points_not_allowed` |
+
+- The `Idempotency-Key` header is a client-generated UUID stored as `attempts.idempotency_key`. A replay returns the original attempt (200 instead of 201), so a flaky phone connection cannot double-log an attempt. The key is required; a missing or malformed one is a 422.
+- **Attempt bodies** depend on `scoring.kind`: `success_count` and `streak` send `outcome`; `points` sends `points` (the server derives `outcome` and ignores a client one); `timed` sends `outcome` and `duration_ms`. `tapped_at` is optional and defaults to the time of receipt.
+- **Undo** is `PATCH /attempts/{id}` with `voided_at`; `null` restores the attempt. A `voided_at` earlier than `recorded_at` is stored as `recorded_at`. Corrections and undo are allowed after a session ends.
+- **Attempt numbers** count up per drill run and are never reused, so after an undo the next attempt still gets the next number. Set numbering uses an attempt's position among non-voided attempts instead.
+- **Set progress** (`set_progress`) is computed by the server (scoring service) and returned on attempt create and patch responses, on `GET /drill-runs/{id}` and on the drill runs inside a session detail, so the client can replace any optimistic count with it. Its shape is `set_number`, `attempts_in_set`, `successes`, `points`, `set_complete`, `set_passed`, `success_rate`, `current_streak` and `best_streak`; see section 4.4.
 
 ### 4.7 Frontend screens
 

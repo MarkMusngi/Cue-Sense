@@ -43,3 +43,30 @@ Scoring = Annotated[
     SuccessCountScoring | StreakScoring | PointsScoring | TimedScoring,
     Field(discriminator="kind"),
 ]
+
+
+class ScoredAttempt(BaseModel):
+    """The part of an attempt that set progress needs."""
+
+    outcome: Literal["success", "fail", "partial"]
+    points: int | None = None
+    is_voided: bool = False
+
+
+class SetProgress(BaseModel):
+    """Where a drill run stands in its current set (docs/architecture.md section 4.4).
+
+    For streak scoring the whole run is one set. set_passed is None until the set is
+    complete. points is None unless the scoring is points; the streaks are None unless
+    it is streak."""
+
+    set_number: int
+    attempts_in_set: int
+    successes: int
+    points: int | None
+    set_complete: bool
+    set_passed: bool | None
+    # Successes over all non-voided attempts in the run; None before the first attempt.
+    success_rate: float | None
+    current_streak: int | None
+    best_streak: int | None
