@@ -17,7 +17,7 @@ Last checked against `main` at the merge of the Playwright harness (CUE-19), plu
 | 4 Layout validation service | Done | Rules are now layout schema v2 (CUE-12, ADR 0008) |
 | 5 Drill CRUD API | Done | CUE-10 |
 | 6 Table editor component | Done | CUE-21, on layout v2 (`docs/table-editor.md`). PR 21 (CUE-11, layout v1) was closed and replaced |
-| 7 Drill editor and detail screens | Partly | Library screen done (CUE-15); editor and detail not started |
+| 7 Drill editor and detail screens | Done | Library (CUE-15), editor and detail (CUE-26, `docs/drill-editor.md`) |
 | 8 Session runner and history | Partly | API and set progress done (CUE-14); screens not started |
 | 9 End-to-end tests | Todo | Playwright harness and CI `e2e` job are in place (CUE-18); the four journeys wait for the editor and runner |
 | 10 Dashboard and `/stats` | Todo | Contract written in `docs/stats-contract.md` |
@@ -43,11 +43,10 @@ Done: prompts 0 to 5 (backend foundation), the design system, the drill library 
 
 Next:
 
-1. Prompt 7: drill editor and detail screens.
-2. Prompt 8: session runner and history.
-3. Prompt 9: end-to-end tests, once the editor and runner exist.
-4. Prompt 11 (authentication) and Prompt 10 (dashboard), in either order, once real sessions exist.
-5. Then video ingestion and vision (Phases 4 and 5), which are out of scope until the MVP is done.
+1. Prompt 8: session runner and history.
+2. Prompt 9: end-to-end tests, once the editor and runner exist.
+3. Prompt 11 (authentication) and Prompt 10 (dashboard), in either order, once real sessions exist.
+4. Then video ingestion and vision (Phases 4 and 5), which are out of scope until the MVP is done.
 
 Separately, record footage following section 8 of the architecture doc. This needs no code and can happen at any time; the earlier the better, because it is the data Phase 5 needs.
 
@@ -215,9 +214,9 @@ Start by checking what PR 21 already has, then give a short plan covering what
 to keep, what to change for v2, and the state shape and undo/redo approach.
 ```
 
-## Prompt 7: Drill editor and detail screens (Sonnet 5.5) (partly done)
+## Prompt 7: Drill editor and detail screens (Sonnet 5.5) (done)
 
-The drill library (cards, thumbnails, filters, search) is done (CUE-15) and lives at `/drills`. What remains is the editor and the detail screen. The web app uses a small hand-written API client in `apps/web/lib/api-client.ts` with snake_case types, which is enough at this size; extend it instead of generating one from the OpenAPI schema. Revisit generating types if the client grows past a few dozen endpoints or the types start to drift from the API.
+The drill library (CUE-15), the editor and the detail screen (CUE-26, `docs/drill-editor.md`) are done. The prompt below is kept for reference. The web app uses a small hand-written API client in `apps/web/lib/api-client.ts` with snake_case types, which is enough at this size; extend it instead of generating one from the OpenAPI schema. Revisit generating types if the client grows past a few dozen endpoints or the types start to drift from the API.
 
 ```
 Using the drill API, TableEditor and the existing app shell and design system,

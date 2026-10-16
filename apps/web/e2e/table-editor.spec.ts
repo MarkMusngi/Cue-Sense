@@ -1,4 +1,6 @@
-import { expect, test, type Locator, type Page } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
+
+import { centre, nextFrames, openEditorPage, tablePoint } from "./helpers";
 
 type Layout = {
   cue_ball: { x: number; y: number };
@@ -8,41 +10,12 @@ type Layout = {
 
 const PAGE = "/dev/table-editor";
 
-/** Open the dev page and wait until React has hydrated, so clicks reach real handlers. */
 async function openEditor(page: Page) {
-  await page.goto(PAGE);
-  await expect(page.getByTestId("table-editor")).toHaveAttribute("data-hydrated", "true");
-}
-
-/** Wait for two animation frames, so style and touch-action changes have reached the compositor. */
-function nextFrames(page: Page) {
-  return page.evaluate(
-    () =>
-      new Promise<void>((resolve) =>
-        requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
-      ),
-  );
+  await openEditorPage(page, PAGE);
 }
 
 async function readLayout(page: Page): Promise<Layout> {
   return JSON.parse(await page.getByTestId("dev-table-editor-json").innerText()) as Layout;
-}
-
-/** Centre of a locator in page pixels. */
-async function centre(locator: Locator) {
-  const box = await locator.boundingBox();
-  if (!box) throw new Error("Element has no box");
-  return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
-}
-
-/** A table position (diamond units) in page pixels; the drawing runs from -0.45 to 8.45. */
-async function tablePoint(page: Page, x: number, y: number) {
-  const box = await page.getByTestId("table-editor-svg").boundingBox();
-  if (!box) throw new Error("Table has no box");
-  return {
-    x: box.x + ((x + 0.45) / 8.9) * box.width,
-    y: box.y + ((y + 0.45) / 4.9) * box.height,
-  };
 }
 
 test.describe("table editor, mouse and keyboard", () => {

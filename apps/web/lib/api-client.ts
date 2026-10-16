@@ -39,13 +39,39 @@ export type DrillLayout = {
   target_pocket?: PocketName | null;
 };
 
-export type DrillScoring = {
-  kind: "success_count" | "streak" | "points" | "timed";
-  attempts_per_set?: number;
-  pass_threshold?: number;
-  streak_length?: number;
-  max_points_per_attempt?: number;
-  time_limit_seconds?: number;
+// Scoring JSON, schema version 1, discriminated by kind (docs/architecture.md section 4.4).
+export type SuccessCountScoring = {
+  schema_version: number;
+  kind: "success_count";
+  attempts_per_set: number;
+  pass_threshold: number;
+};
+export type StreakScoring = { schema_version: number; kind: "streak"; streak_length: number };
+export type PointsScoring = {
+  schema_version: number;
+  kind: "points";
+  attempts_per_set: number;
+  max_points_per_attempt: number;
+  /** Total points per set. */
+  pass_threshold: number;
+};
+export type TimedScoring = {
+  schema_version: number;
+  kind: "timed";
+  attempts_per_set: number;
+  time_limit_seconds: number;
+  pass_threshold: number;
+};
+export type DrillScoring = SuccessCountScoring | StreakScoring | PointsScoring | TimedScoring;
+export type ScoringKind = DrillScoring["kind"];
+
+export type DrillVersionRead = {
+  id: string;
+  version_number: number;
+  instructions: string;
+  layout: DrillLayout;
+  scoring: DrillScoring;
+  created_at: string;
 };
 
 export type DrillRead = {
@@ -58,14 +84,23 @@ export type DrillRead = {
   created_at: string;
   updated_at: string;
   tags: TagRead[];
-  current_version: {
-    id: string;
-    version_number: number;
-    instructions: string;
-    layout: DrillLayout;
-    scoring: DrillScoring;
-    created_at: string;
-  } | null;
+  current_version: DrillVersionRead | null;
+};
+
+/** What a drill save carries (POST /drills, PUT /drills/{id}). */
+export type DrillContent = {
+  title: string;
+  description?: string | null;
+  difficulty: number;
+  tag_ids: string[];
+  instructions: string;
+  layout: DrillLayout;
+  scoring: DrillScoring;
+};
+
+export type DrillUpdate = DrillContent & {
+  /** The version that was edited; a different current version is a 409 stale_version. */
+  base_drill_version_id: string;
 };
 
 export type Page<T> = { items: T[]; total: number; limit: number; offset: number };
@@ -77,7 +112,12 @@ export type DrillFilters = {
   search?: string;
 };
 
-export type ApiResult<T> = { ok: true; data: T } | { ok: false; error: string; code?: string };
+/** One problem in an API error: where it is (a path into the request body) and what. */
+export type ApiErrorDetail = { code: string; message: string; path: (string | number)[] };
+
+export type ApiResult<T> =
+  | { ok: true; data: T }
+  | { ok: false; error: string; code?: string; details?: ApiErrorDetail[] };
 
 // Server-side only: in Docker Compose the API is reachable at http://api:8000.
 export function getApiUrl(): string {
@@ -97,23 +137,44 @@ export async function getHealth(): Promise<HealthResult> {
   }
 }
 
-async function getJson<T>(path: string): Promise<ApiResult<T>> {
+async function request<T>(
+  method: "GET" | "POST" | "PUT" | "PATCH",
+  path: string,
+  body?: unknown,
+): Promise<ApiResult<T>> {
   try {
-    const response = await fetch(`${getApiUrl()}${path}`, { cache: "no-store" });
-    const body: unknown = await response.json();
+    const response = await fetch(`${getApiUrl()}${path}`, {
+      method,
+      cache: "no-store",
+      headers: body === undefined ? undefined : { "Content-Type": "application/json" },
+      body: body === undefined ? undefined : JSON.stringify(body),
+    });
+    const text = await response.text();
+    let parsed: unknown;
+    try {
+      parsed = text ? JSON.parse(text) : undefined;
+    } catch {
+      parsed = undefined;
+    }
     if (!response.ok) {
-      const error = (body as { error?: { code?: string; message?: string } }).error;
+      const error = (parsed as { error?: { code?: string; message?: string; details?: ApiErrorDetail[] } })
+        ?.error;
       return {
         ok: false,
         code: error?.code,
         error: error?.message ?? `API returned ${response.status}`,
+        details: error?.details?.length ? error.details : undefined,
       };
     }
-    return { ok: true, data: body as T };
+    return { ok: true, data: parsed as T };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     return { ok: false, error: `Could not reach the API: ${message}` };
   }
+}
+
+function getJson<T>(path: string): Promise<ApiResult<T>> {
+  return request<T>("GET", path);
 }
 
 export function getDrills(filters: DrillFilters = {}): Promise<ApiResult<Page<DrillRead>>> {
@@ -126,4 +187,32 @@ export function getDrills(filters: DrillFilters = {}): Promise<ApiResult<Page<Dr
 
 export function getTags(): Promise<ApiResult<Page<TagRead>>> {
   return getJson<Page<TagRead>>("/tags?limit=100");
+}
+
+export function getDrill(id: string): Promise<ApiResult<DrillRead>> {
+  return getJson<DrillRead>(`/drills/${encodeURIComponent(id)}`);
+}
+
+export function getDrillVersions(id: string): Promise<ApiResult<Page<DrillVersionRead>>> {
+  return getJson<Page<DrillVersionRead>>(`/drills/${encodeURIComponent(id)}/versions?limit=100`);
+}
+
+export function createDrill(content: DrillContent): Promise<ApiResult<DrillRead>> {
+  return request<DrillRead>("POST", "/drills", content);
+}
+
+export function duplicateDrill(sourceDrillId: string): Promise<ApiResult<DrillRead>> {
+  return request<DrillRead>("POST", "/drills", { source_drill_id: sourceDrillId });
+}
+
+export function updateDrill(id: string, body: DrillUpdate): Promise<ApiResult<DrillRead>> {
+  return request<DrillRead>("PUT", `/drills/${encodeURIComponent(id)}`, body);
+}
+
+export function changeDrillStatus(id: string, status: DrillStatus): Promise<ApiResult<DrillRead>> {
+  return request<DrillRead>("PATCH", `/drills/${encodeURIComponent(id)}`, { status });
+}
+
+export function createTag(name: string): Promise<ApiResult<TagRead>> {
+  return request<TagRead>("POST", "/tags", { name });
 }

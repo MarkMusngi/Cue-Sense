@@ -99,6 +99,27 @@ describe("TableEditor", () => {
     expect(svg).toHaveClass("touch-none");
   });
 
+  it("can have its selection controlled from outside", async () => {
+    const user = userEvent.setup();
+    const onSelectedChange = vi.fn();
+    render(
+      <TableEditor
+        layout={START}
+        onChange={() => {}}
+        selected="ball_1"
+        onSelectedChange={onSelectedChange}
+      />,
+    );
+    expect(screen.getByTestId("table-editor-selection")).toHaveTextContent("Ball 1");
+
+    screen.getByTestId("table-editor-ball-0").focus();
+    await user.keyboard("{Enter}");
+
+    // The editor reports the choice, but the parent decides what is selected.
+    expect(onSelectedChange).toHaveBeenCalledWith("ball_0");
+    expect(screen.getByTestId("table-editor-selection")).toHaveTextContent("Ball 1");
+  });
+
   it("selects a ball with Enter and nudges it with the arrow keys", async () => {
     const user = userEvent.setup();
     const onChange = vi.fn();

@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import type { DrillRead, DrillScoring } from "@/lib/api-client";
 import { DifficultyPips } from "./difficulty-pips";
 import { TableThumbnail } from "./table-thumbnail";
@@ -11,7 +13,7 @@ export function scoringLabel(scoring: DrillScoring): string {
     case "points":
       return `${scoring.pass_threshold} points per set`;
     case "timed": {
-      const minutes = Math.round((scoring.time_limit_seconds ?? 0) / 60);
+      const minutes = Math.round(scoring.time_limit_seconds / 60);
       return `${scoring.pass_threshold} of ${scoring.attempts_per_set} in ${minutes} min`;
     }
   }
@@ -22,7 +24,7 @@ export function DrillCard({ drill }: { drill: DrillRead }) {
   return (
     <li>
       <article
-        className="flex h-full flex-col gap-3 rounded-2xl border border-line bg-surface p-3 hover:border-muted"
+        className="relative flex h-full flex-col gap-3 rounded-2xl border border-line bg-surface p-3 hover:border-muted"
         data-testid="drill-card"
         data-drill-id={drill.id}
       >
@@ -35,7 +37,16 @@ export function DrillCard({ drill }: { drill: DrillRead }) {
         </div>
         <div className="flex flex-1 flex-col gap-1.5 px-1 pb-1">
           <div className="flex items-start justify-between gap-2">
-            <h2 className="font-display text-[22px] font-semibold leading-[1.1]">{drill.title}</h2>
+            <h2 className="font-display text-[22px] font-semibold leading-[1.1]">
+              {/* The link's ::after covers the whole card, so the card is one big target. */}
+              <Link
+                href={`/drills/${drill.id}`}
+                data-testid="drill-card-link"
+                className="after:absolute after:inset-0 after:rounded-2xl after:content-['']"
+              >
+                {drill.title}
+              </Link>
+            </h2>
             {drill.status !== "active" && (
               <span
                 className="flex-none rounded-full border border-dashed border-line px-2 py-0.5 text-xs text-muted"

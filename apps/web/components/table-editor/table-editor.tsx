@@ -48,6 +48,10 @@ type TableEditorProps = {
   onChange?: (layout: DrillLayout) => void;
   /** Draw the table only: no toolbar, handlers or focus. */
   readOnly?: boolean;
+  /** Control the selection (a ball id or the landing zone) from outside, for example to
+   *  select the ball a validation message is about. Leave out to let the editor manage it. */
+  selected?: string | null;
+  onSelectedChange?: (id: string | null) => void;
 };
 
 type Drag = {
@@ -72,10 +76,21 @@ const TABLE_CENTRE: Point = { x: 4, y: 2 };
  * set the cue spin, undo and redo. Controlled: the layout comes from the parent, which
  * is told about every change. Everything is also reachable from the keyboard.
  */
-export function TableEditor({ layout, onChange, readOnly = false }: TableEditorProps) {
+export function TableEditor({
+  layout,
+  onChange,
+  readOnly = false,
+  selected: controlledSelected,
+  onSelectedChange,
+}: TableEditorProps) {
   const history = useLayoutHistory(layout, onChange);
   const [tool, setTool] = useState<Tool>("select");
-  const [selected, setSelected] = useState<string | null>(null);
+  const [ownSelected, setOwnSelected] = useState<string | null>(null);
+  const selected = controlledSelected !== undefined ? controlledSelected : ownSelected;
+  function setSelected(id: string | null) {
+    setOwnSelected(id);
+    onSelectedChange?.(id);
+  }
   const [isSnapping, setIsSnapping] = useState(true);
   const [draft, setDraft] = useState<DrillLayout | null>(null);
   const svgRef = useRef<SVGSVGElement>(null);
