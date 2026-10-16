@@ -158,6 +158,31 @@ describe("DrillEditor, new drill", () => {
     );
   });
 
+  it("keeps a chip toggled while a new tag is still being created", async () => {
+    const user = userEvent.setup();
+    let finish: (value: ApiResult<TagRead>) => void = () => {};
+    createTagAction.mockReturnValueOnce(
+      new Promise<ApiResult<TagRead>>((resolve) => {
+        finish = resolve;
+      }),
+    );
+    render(<DrillEditor tags={TAGS} />);
+
+    await user.type(screen.getByTestId("drill-editor-tag-new"), "Position");
+    await user.click(screen.getByTestId("drill-editor-tag-add"));
+    // The request is in flight: toggle another tag now.
+    await user.click(screen.getByTestId("drill-editor-tag-t2"));
+    expect(screen.getByTestId("drill-editor-tag-t2")).toHaveAttribute("aria-pressed", "true");
+
+    finish({
+      ok: true,
+      data: { id: "t3", name: "Position", category: "custom", created_at: "2026-10-16T10:00:00Z" },
+    });
+
+    expect(await screen.findByTestId("drill-editor-tag-t3")).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByTestId("drill-editor-tag-t2")).toHaveAttribute("aria-pressed", "true");
+  });
+
   it("shows the empty tag state", () => {
     render(<DrillEditor tags={[]} />);
     expect(screen.getByTestId("drill-editor-tags-empty")).toBeInTheDocument();

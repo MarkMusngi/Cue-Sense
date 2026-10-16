@@ -13,7 +13,10 @@ type TagPickerProps = {
   tags: TagRead[];
   selectedIds: string[];
   onChange: (selectedIds: string[]) => void;
-  /** Called with a tag the person just created, so the parent can list it. */
+  /**
+   * Called with a tag the person just created. The parent lists it and selects it, working
+   * from its newest state, so a chip toggled while the request was in flight is kept.
+   */
   onTagCreated: (tag: TagRead) => void;
   error?: string;
 };
@@ -37,7 +40,6 @@ export function TagPicker({ tags, selectedIds, onChange, onTagCreated, error }: 
       const result = await createTagAction(trimmed);
       if (result.ok) {
         onTagCreated(result.data);
-        onChange([...selectedIds, result.data.id]);
         setName("");
       } else {
         setCreateError(
