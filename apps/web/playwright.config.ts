@@ -14,6 +14,8 @@ export default defineConfig({
   forbidOnly: isCi,
   retries: isCi ? 1 : 0,
   reporter: [["list"], ["html", { open: "never" }]],
+  // The dev server compiles and hydrates slowly on a CI runner.
+  expect: { timeout: 15_000 },
   use: {
     baseURL,
     trace: "on-first-retry",

@@ -3,6 +3,7 @@
 import { useEffect, useId, useRef, useState, type KeyboardEvent, type PointerEvent } from "react";
 
 import type { DrillLayout, PocketName } from "@/lib/api-client";
+import { cx } from "@/lib/cx";
 import { CUE_BALL_ID, FINE_STEP, SNAP_STEP, VIEW_BOX, type Point } from "@/lib/layout";
 import {
   addBall,
@@ -99,6 +100,10 @@ export function TableEditor({ layout, onChange, readOnly = false }: TableEditorP
 
   const shown = draft ?? history.present;
   const active = selectionExists(shown, selected) ? selected : null;
+  // Chromium only honours touch-action on the svg itself, not on shapes inside it. So the
+  // table stops panning only while something is selected or a tool is active: a swipe on
+  // bare felt scrolls the page, and tapping a ball first lets a touch drag move it.
+  const stopsPanning = active !== null || tool !== "select";
   const viewBox = `${VIEW_BOX.x} ${VIEW_BOX.y} ${VIEW_BOX.width} ${VIEW_BOX.height}`;
 
   if (readOnly) {
@@ -348,7 +353,7 @@ export function TableEditor({ layout, onChange, readOnly = false }: TableEditorP
           role="group"
           aria-label={describeLayout(shown)}
           aria-describedby={helpId}
-          className="block w-full touch-none select-none"
+          className={cx("block w-full select-none", stopsPanning && "touch-none")}
           data-testid="table-editor-svg"
           onPointerDown={onBackgroundPointerDown}
           onPointerMove={onPointerMove}

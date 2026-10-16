@@ -52,7 +52,9 @@ Pure helpers in `lib/table-geometry.ts` and `lib/layout-edits.ts`, tested in the
 
 ## Phone
 
-At 375 px a ball is about 3.5 px in radius, so touch targets for balls are enlarged (hit radius 0.2, about 8 px) but still far below 44 px. Select a ball by tapping near it; for exact placement use the arrow keys or drag. On-screen nudge buttons are a possible follow-up. The tool row scrolls sideways; the page never does.
+- **Touch model.** Tap a ball (or the landing zone) to select it, then drag. Chromium only honours `touch-action` on the `<svg>` itself, not on shapes inside it, so the table stops panning only while something is selected or a tool is active. With nothing selected, a swipe on the felt scrolls the page; tapping the felt deselects. `e2e/table-editor.spec.ts` checks this with real touch swipes.
+- **Size.** At 375 px a ball is about 3.5 px in radius, so touch targets for balls are enlarged (hit radius 0.2, about 8 px) but still far below 44 px. Tap near a ball to select it; for exact placement use the arrow keys or drag. On-screen nudge buttons are a possible follow-up.
+- The tool row scrolls sideways; the page never does.
 
 ## Contract with the API
 
