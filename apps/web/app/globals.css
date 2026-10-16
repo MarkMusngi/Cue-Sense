@@ -1,24 +1,84 @@
 @import "tailwindcss";
 
+/* Night hall design tokens. Dark is the default; light follows the OS setting. */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --bg: #111315;
+  --surface: #191c1f;
+  --raised: #22262a;
+  --line: #2d3237;
+  --text: #f2eee4;
+  --muted: #a8a498;
+  --chalk: #5aa9e6;
+  --chalk-ink: #06233a;
+  --chalk-soft: rgba(90, 169, 230, 0.14);
+  --miss: #ee9a4d;
+  --miss-soft: rgba(238, 154, 77, 0.12);
+  --focus: #9cd1ff;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-}
-
-@media (prefers-color-scheme: dark) {
+@media (prefers-color-scheme: light) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --bg: #f1f2ef;
+    --surface: #ffffff;
+    --raised: #f7f7f4;
+    --line: #dcddd8;
+    --text: #16191c;
+    --muted: #575c61;
+    --chalk: #1e6caf;
+    --chalk-ink: #ffffff;
+    --chalk-soft: rgba(30, 108, 175, 0.1);
+    --miss: #b4570f;
+    --miss-soft: rgba(180, 87, 15, 0.1);
+    --focus: #1e6caf;
   }
 }
 
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-raised: var(--raised);
+  --color-line: var(--line);
+  --color-text: var(--text);
+  --color-muted: var(--muted);
+  --color-chalk: var(--chalk);
+  --color-chalk-ink: var(--chalk-ink);
+  --color-chalk-soft: var(--chalk-soft);
+  --color-miss: var(--miss);
+  --color-miss-soft: var(--miss-soft);
+  --font-sans: var(--font-plex-sans), system-ui, sans-serif;
+  --font-display: var(--font-barlow), sans-serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, monospace;
+}
+
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+}
+
+:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+@keyframes pulse-skeleton {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.skeleton {
+  animation: pulse-skeleton 1.6s ease-in-out infinite;
+  background: var(--raised);
+  border-radius: 8px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton {
+    animation: none;
+  }
 }
