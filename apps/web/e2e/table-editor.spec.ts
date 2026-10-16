@@ -8,6 +8,12 @@ type Layout = {
 
 const PAGE = "/dev/table-editor";
 
+/** Open the dev page and wait until React has hydrated, so clicks reach real handlers. */
+async function openEditor(page: Page) {
+  await page.goto(PAGE);
+  await expect(page.getByTestId("table-editor")).toHaveAttribute("data-hydrated", "true");
+}
+
 async function readLayout(page: Page): Promise<Layout> {
   return JSON.parse(await page.getByTestId("dev-table-editor-json").innerText()) as Layout;
 }
@@ -31,8 +37,7 @@ async function tablePoint(page: Page, x: number, y: number) {
 
 test.describe("table editor, mouse and keyboard", () => {
   test("places, nudges, drags, mirrors and undoes", async ({ page }) => {
-    await page.goto(PAGE);
-    await expect(page.getByTestId("table-editor")).toBeVisible();
+    await openEditor(page);
     const start = await readLayout(page);
     expect(start.object_balls).toHaveLength(1);
 
@@ -78,7 +83,7 @@ test.describe("table editor, mouse and keyboard", () => {
   });
 
   test("keeps a dragged ball from overlapping another", async ({ page }) => {
-    await page.goto(PAGE);
+    await openEditor(page);
     const from = await centre(page.getByTestId("table-editor").getByTestId("table-editor-ball-1"));
     // Drop it right on top of the cue ball.
     const onCue = await tablePoint(page, 2, 2);
@@ -97,7 +102,7 @@ test.describe("table editor, mouse and keyboard", () => {
   });
 
   test("reaches every control from the keyboard", async ({ page }) => {
-    await page.goto(PAGE);
+    await openEditor(page);
     await page.getByTestId("table-editor-pocket-top-right").focus();
     await page.keyboard.press("Enter");
     await expect.poll(async () => (await readLayout(page)).target_pocket).toBe("top_right");
@@ -112,7 +117,7 @@ test.describe("table editor, mouse and keyboard", () => {
   });
 
   test("shows the same table read-only, with nothing to tab to", async ({ page }) => {
-    await page.goto(PAGE);
+    await openEditor(page);
     const readonly = page.getByTestId("dev-table-editor-readonly");
     await expect(readonly.getByTestId("table-editor-readonly")).toBeVisible();
     await expect(readonly.locator("[tabindex]")).toHaveCount(0);
@@ -123,7 +128,7 @@ test.describe("table editor on a phone", () => {
   test.use({ viewport: { width: 375, height: 812 }, hasTouch: true });
 
   test("fits the screen and works by tapping", async ({ page }) => {
-    await page.goto(PAGE);
+    await openEditor(page);
 
     const overflow = await page.evaluate(
       () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
