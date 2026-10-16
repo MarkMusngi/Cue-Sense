@@ -1,20 +1,5 @@
 import type { DrillScoring } from "@/lib/api-client";
-
-import { scoringLabel } from "../drill-card";
-
-/** The line under the headline rule, e.g. "per set of 10 attempts". */
-export function scoringDetail(scoring: DrillScoring): string {
-  switch (scoring.kind) {
-    case "success_count":
-      return `per set of ${scoring.attempts_per_set} attempts`;
-    case "streak":
-      return "the whole drill run is one set";
-    case "points":
-      return `per set of ${scoring.attempts_per_set} attempts, up to ${scoring.max_points_per_attempt} points each`;
-    case "timed":
-      return `within ${scoring.time_limit_seconds} seconds, per set of ${scoring.attempts_per_set} attempts`;
-  }
-}
+import { scoringDetail, scoringLabel } from "@/lib/scoring-text";
 
 export function ScoringSummary({ scoring }: { scoring: DrillScoring }) {
   return (

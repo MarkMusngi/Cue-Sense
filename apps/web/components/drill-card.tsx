@@ -1,23 +1,9 @@
 import Link from "next/link";
 
-import type { DrillRead, DrillScoring } from "@/lib/api-client";
+import type { DrillRead } from "@/lib/api-client";
+import { scoringLabel } from "@/lib/scoring-text";
 import { DifficultyPips } from "./difficulty-pips";
 import { TableThumbnail } from "./table-thumbnail";
-
-export function scoringLabel(scoring: DrillScoring): string {
-  switch (scoring.kind) {
-    case "success_count":
-      return `Make ${scoring.pass_threshold} of ${scoring.attempts_per_set}`;
-    case "streak":
-      return `${scoring.streak_length} in a row`;
-    case "points":
-      return `${scoring.pass_threshold} points per set`;
-    case "timed": {
-      const minutes = Math.round(scoring.time_limit_seconds / 60);
-      return `${scoring.pass_threshold} of ${scoring.attempts_per_set} in ${minutes} min`;
-    }
-  }
-}
 
 export function DrillCard({ drill }: { drill: DrillRead }) {
   const version = drill.current_version;
