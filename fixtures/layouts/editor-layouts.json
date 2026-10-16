@@ -1,0 +1,306 @@
+{
+  "cases": [
+    {
+      "name": "empty_table",
+      "layout": {
+        "schema_version": 2,
+        "table": {
+          "kind": "pool",
+          "size_ft": 9
+        },
+        "cue_ball": {
+          "id": "ball_0",
+          "x": 2,
+          "y": 2
+        },
+        "object_balls": []
+      }
+    },
+    {
+      "name": "cue_ball_touching_cushion",
+      "layout": {
+        "schema_version": 2,
+        "table": {
+          "kind": "pool",
+          "size_ft": 9
+        },
+        "cue_ball": {
+          "id": "ball_0",
+          "x": 0.09,
+          "y": 2
+        },
+        "object_balls": []
+      }
+    },
+    {
+      "name": "cue_ball_in_corner",
+      "layout": {
+        "schema_version": 2,
+        "table": {
+          "kind": "pool",
+          "size_ft": 9
+        },
+        "cue_ball": {
+          "id": "ball_0",
+          "x": 0.09,
+          "y": 0.09
+        },
+        "object_balls": []
+      }
+    },
+    {
+      "name": "two_balls_exactly_touching",
+      "layout": {
+        "schema_version": 2,
+        "table": {
+          "kind": "pool",
+          "size_ft": 9
+        },
+        "cue_ball": {
+          "id": "ball_0",
+          "x": 2,
+          "y": 2
+        },
+        "object_balls": [
+          {
+            "id": "ball_1",
+            "x": 4,
+            "y": 2
+          },
+          {
+            "id": "ball_2",
+            "x": 4.18,
+            "y": 2
+          }
+        ]
+      }
+    },
+    {
+      "name": "overlapping_drop_pushed_apart",
+      "layout": {
+        "schema_version": 2,
+        "table": {
+          "kind": "pool",
+          "size_ft": 9
+        },
+        "cue_ball": {
+          "id": "ball_0",
+          "x": 2,
+          "y": 2
+        },
+        "object_balls": [
+          {
+            "id": "ball_1",
+            "x": 4,
+            "y": 2
+          },
+          {
+            "id": "ball_2",
+            "x": 4.18,
+            "y": 2
+          }
+        ]
+      }
+    },
+    {
+      "name": "fifteen_object_balls",
+      "layout": {
+        "schema_version": 2,
+        "table": {
+          "kind": "pool",
+          "size_ft": 9
+        },
+        "cue_ball": {
+          "id": "ball_0",
+          "x": 2,
+          "y": 2
+        },
+        "object_balls": [
+          {
+            "id": "ball_1",
+            "x": 3,
+            "y": 0.6
+          },
+          {
+            "id": "ball_2",
+            "x": 3.8,
+            "y": 0.6
+          },
+          {
+            "id": "ball_3",
+            "x": 4.6,
+            "y": 0.6
+          },
+          {
+            "id": "ball_4",
+            "x": 5.4,
+            "y": 0.6
+          },
+          {
+            "id": "ball_5",
+            "x": 6.2,
+            "y": 0.6
+          },
+          {
+            "id": "ball_6",
+            "x": 3,
+            "y": 1.8
+          },
+          {
+            "id": "ball_7",
+            "x": 3.8,
+            "y": 1.8
+          },
+          {
+            "id": "ball_8",
+            "x": 4.6,
+            "y": 1.8
+          },
+          {
+            "id": "ball_9",
+            "x": 5.4,
+            "y": 1.8
+          },
+          {
+            "id": "ball_10",
+            "x": 6.2,
+            "y": 1.8
+          },
+          {
+            "id": "ball_11",
+            "x": 3,
+            "y": 3
+          },
+          {
+            "id": "ball_12",
+            "x": 3.8,
+            "y": 3
+          },
+          {
+            "id": "ball_13",
+            "x": 4.6,
+            "y": 3
+          },
+          {
+            "id": "ball_14",
+            "x": 5.4,
+            "y": 3
+          },
+          {
+            "id": "ball_15",
+            "x": 6.2,
+            "y": 3
+          }
+        ]
+      }
+    },
+    {
+      "name": "landing_zone_spin_and_pocket",
+      "layout": {
+        "schema_version": 2,
+        "table": {
+          "kind": "pool",
+          "size_ft": 9
+        },
+        "cue_ball": {
+          "id": "ball_0",
+          "x": 2,
+          "y": 2
+        },
+        "object_balls": [
+          {
+            "id": "ball_1",
+            "x": 5.5,
+            "y": 1.2
+          },
+          {
+            "id": "ball_2",
+            "x": 6.25,
+            "y": 3
+          }
+        ],
+        "landing_zone": {
+          "x": 3,
+          "y": 2.5
+        },
+        "cue_spin": {
+          "x": 0.4,
+          "y": -0.3
+        },
+        "target_pocket": "top_right"
+      }
+    },
+    {
+      "name": "mirrored_horizontally",
+      "layout": {
+        "schema_version": 2,
+        "table": {
+          "kind": "pool",
+          "size_ft": 9
+        },
+        "cue_ball": {
+          "id": "ball_0",
+          "x": 6,
+          "y": 2
+        },
+        "object_balls": [
+          {
+            "id": "ball_1",
+            "x": 2.5,
+            "y": 1.2
+          },
+          {
+            "id": "ball_2",
+            "x": 1.75,
+            "y": 3
+          }
+        ],
+        "landing_zone": {
+          "x": 5,
+          "y": 2.5
+        },
+        "cue_spin": {
+          "x": -0.4,
+          "y": -0.3
+        },
+        "target_pocket": "top_left"
+      }
+    },
+    {
+      "name": "mirrored_vertically",
+      "layout": {
+        "schema_version": 2,
+        "table": {
+          "kind": "pool",
+          "size_ft": 9
+        },
+        "cue_ball": {
+          "id": "ball_0",
+          "x": 2,
+          "y": 2
+        },
+        "object_balls": [
+          {
+            "id": "ball_1",
+            "x": 5.5,
+            "y": 2.8
+          },
+          {
+            "id": "ball_2",
+            "x": 6.25,
+            "y": 1
+          }
+        ],
+        "landing_zone": {
+          "x": 3,
+          "y": 1.5
+        },
+        "cue_spin": {
+          "x": -0.4,
+          "y": -0.3
+        },
+        "target_pocket": "bottom_right"
+      }
+    }
+  ]
+}

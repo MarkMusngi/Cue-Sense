@@ -25,9 +25,12 @@ export type PocketName =
   | "bottom_middle"
   | "bottom_right";
 
+export type LayoutTable = { kind: "pool"; size_ft: 9 };
+
 // Layout JSON, schema version 2, in diamond units (README decision 1, ADR 0008).
 export type DrillLayout = {
   schema_version: number;
+  table: LayoutTable;
   cue_ball: { id: string; x: number; y: number };
   object_balls: { id: string; x: number; y: number }[];
   /** A fixed-size circle (radius 0.5 diamonds) centred here. */
