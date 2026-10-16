@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { DrillCard } from "@/components/drill-card";
 import { DrillFilters } from "@/components/drill-filters";
 import { PageHeader } from "@/components/page/page-header";
+import { LinkButton } from "@/components/ui/link-button";
 import { EmptyState, ErrorCard } from "@/components/state-cards";
 import { getDrills, getHealth, getTags, type DrillFilters as DrillQuery } from "@/lib/api-client";
 import { readLibraryParams, type RawSearchParams } from "@/lib/drill-params";
@@ -39,13 +40,18 @@ export default async function DrillsPage({
   return (
     <div className="mx-auto flex max-w-5xl flex-col gap-6 p-4 md:p-8">
       <PageHeader title="Drills">
-        {drills.ok && (
-          <p className="text-sm text-muted" data-testid="drill-count">
-            {items.length < total
-              ? `Showing ${items.length} of ${total} drills`
-              : `${total} ${total === 1 ? "drill" : "drills"}`}
-          </p>
-        )}
+        <div className="flex flex-wrap items-center gap-4">
+          {drills.ok && (
+            <p className="text-sm text-muted" data-testid="drill-count">
+              {items.length < total
+                ? `Showing ${items.length} of ${total} drills`
+                : `${total} ${total === 1 ? "drill" : "drills"}`}
+            </p>
+          )}
+          <LinkButton href="/drills/new" variant="primary" data-testid="drill-new">
+            New drill
+          </LinkButton>
+        </div>
       </PageHeader>
 
       <DrillFilters params={params} tags={tags.ok ? tags.data.items : []} />
