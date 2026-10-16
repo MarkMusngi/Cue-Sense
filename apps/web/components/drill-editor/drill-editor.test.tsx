@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { ApiResult, DrillRead, TagRead } from "@/lib/api-client";
 import { emptyForm } from "@/lib/drill-form";
@@ -300,19 +300,78 @@ describe("DrillEditor, editing", () => {
     expect(screen.getByTestId("drill-editor-save")).toBeDisabled();
   });
 
-  it("shows one settings section at a time on a phone, all of them on a desktop", async () => {
-    const user = userEvent.setup();
-    render(<DrillEditor drill={DRILL} tags={TAGS} />);
-    const scoring = screen.getByTestId("drill-editor-scoring").closest("div.flex-col.gap-5");
-    const details = screen.getByTestId("drill-editor-details").closest("div.flex-col.gap-5");
+  describe("settings tabs", () => {
+    function setPhone(isPhone: boolean) {
+      vi.stubGlobal("matchMedia", (query: string) => ({
+        matches: isPhone,
+        media: query,
+        addEventListener: () => {},
+        removeEventListener: () => {},
+      }));
+    }
 
-    // Details is the open tab; the others carry "hidden md:flex" (hidden below md only).
-    expect(details).not.toHaveClass("hidden");
-    expect(scoring).toHaveClass("hidden", "md:flex");
+    afterEach(() => {
+      vi.unstubAllGlobals();
+    });
 
-    await user.click(screen.getByTestId("drill-editor-tab-scoring"));
-    expect(scoring).not.toHaveClass("hidden");
-    expect(details).toHaveClass("hidden", "md:flex");
-    expect(screen.getByTestId("drill-editor-tab-scoring")).toHaveAttribute("aria-selected", "true");
+    it("is plain sections, with no tab roles on the panels, on a desktop", () => {
+      setPhone(false);
+      render(<DrillEditor drill={DRILL} tags={TAGS} />);
+
+      for (const id of ["details", "scoring", "notes"]) {
+        expect(screen.getByTestId(`drill-editor-panel-${id}`)).not.toHaveAttribute("role");
+      }
+    });
+
+    it("wires each tab to its panel on a phone, and opens one panel at a time", async () => {
+      const user = userEvent.setup();
+      setPhone(true);
+      render(<DrillEditor drill={DRILL} tags={TAGS} />);
+
+      const detailsTab = screen.getByTestId("drill-editor-tab-details");
+      const scoringTab = screen.getByTestId("drill-editor-tab-scoring");
+      expect(detailsTab).toHaveAttribute("aria-controls", "drill-editor-panel-details");
+      expect(detailsTab).toHaveAttribute("tabindex", "0");
+      expect(scoringTab).toHaveAttribute("tabindex", "-1");
+      const scoringPanel = screen.getByTestId("drill-editor-panel-scoring");
+      expect(scoringPanel).toHaveAttribute("role", "tabpanel");
+      expect(scoringPanel).toHaveAttribute("aria-labelledby", "drill-editor-tab-scoring");
+      expect(scoringPanel).toHaveAttribute("data-active", "false");
+      const detailsPanel = screen.getByTestId("drill-editor-panel-details");
+      expect(detailsPanel).toHaveAttribute("data-active", "true");
+
+      await user.click(scoringTab);
+
+      expect(scoringTab).toHaveAttribute("aria-selected", "true");
+      expect(scoringPanel).toHaveAttribute("data-active", "true");
+      expect(detailsPanel).toHaveAttribute("data-active", "false");
+    });
+
+    it("moves between tabs with the arrow, Home and End keys", async () => {
+      const user = userEvent.setup();
+      setPhone(true);
+      render(<DrillEditor drill={DRILL} tags={TAGS} />);
+      const tab = (id: string) => screen.getByTestId(`drill-editor-tab-${id}`);
+
+      tab("details").focus();
+      await user.keyboard("{ArrowRight}");
+      expect(tab("scoring")).toHaveFocus();
+      expect(tab("scoring")).toHaveAttribute("aria-selected", "true");
+
+      await user.keyboard("{ArrowRight}");
+      expect(tab("notes")).toHaveFocus();
+
+      await user.keyboard("{ArrowRight}");
+      expect(tab("details")).toHaveFocus();
+
+      await user.keyboard("{ArrowLeft}");
+      expect(tab("notes")).toHaveFocus();
+
+      await user.keyboard("{Home}");
+      expect(tab("details")).toHaveFocus();
+
+      await user.keyboard("{End}");
+      expect(tab("notes")).toHaveFocus();
+    });
   });
 });

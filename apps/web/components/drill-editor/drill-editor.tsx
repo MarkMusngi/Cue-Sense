@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition, type KeyboardEvent } from "react";
 
 import { createDrillAction, updateDrillAction } from "@/app/(app)/drills/actions";
 import type { DrillLayout, DrillRead, TagRead } from "@/lib/api-client";
@@ -24,6 +24,7 @@ import { DetailFields, InstructionsField } from "./detail-fields";
 import { ProblemList } from "./problem-list";
 import { ScoringFields } from "./scoring-fields";
 import { TagPicker } from "./tag-picker";
+import { useIsPhone } from "./use-is-phone";
 
 type Tab = "details" | "scoring" | "notes";
 
@@ -70,6 +71,8 @@ export function DrillEditor({ drill, tags: initialTags }: DrillEditorProps) {
   const [selectedBall, setSelectedBall] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>("details");
   const [isSaving, startSaving] = useTransition();
+  const isPhone = useIsPhone();
+  const tabRefs = useRef<Partial<Record<Tab, HTMLButtonElement | null>>>({});
   const isLeaving = useRef(false);
 
   const dirty = isDirty(form, initial);
@@ -152,6 +155,34 @@ export function DrillEditor({ drill, tags: initialTags }: DrillEditorProps) {
     setSaveError(null);
     setIsStale(false);
     setSelectedBall(null);
+  }
+
+  // The tab pattern (roles, wiring, arrow keys) applies only where the tabs are shown.
+  function onTabKeyDown(event: KeyboardEvent<HTMLButtonElement>, current: Tab) {
+    const index = TABS.findIndex((item) => item.id === current);
+    let target: (typeof TABS)[number] | null = null;
+    if (event.key === "ArrowRight") target = TABS[(index + 1) % TABS.length];
+    else if (event.key === "ArrowLeft") target = TABS[(index + TABS.length - 1) % TABS.length];
+    else if (event.key === "Home") target = TABS[0];
+    else if (event.key === "End") target = TABS[TABS.length - 1];
+    if (!target) return;
+    event.preventDefault();
+    setTab(target.id);
+    tabRefs.current[target.id]?.focus();
+  }
+
+  function panelProps(id: Tab) {
+    return {
+      "data-testid": `drill-editor-panel-${id}`,
+      "data-active": tab === id,
+      ...(isPhone
+        ? {
+            role: "tabpanel",
+            id: `drill-editor-panel-${id}`,
+            "aria-labelledby": `drill-editor-tab-${id}`,
+          }
+        : {}),
+    };
   }
 
   const currentNumber = version?.version_number;
@@ -251,9 +282,15 @@ export function DrillEditor({ drill, tags: initialTags }: DrillEditorProps) {
             {TABS.map((item) => (
               <button
                 key={item.id}
+                ref={(element) => {
+                  tabRefs.current[item.id] = element;
+                }}
                 type="button"
                 role="tab"
+                id={`drill-editor-tab-${item.id}`}
                 aria-selected={tab === item.id}
+                aria-controls={`drill-editor-panel-${item.id}`}
+                tabIndex={tab === item.id ? 0 : -1}
                 data-testid={`drill-editor-tab-${item.id}`}
                 className={cx(
                   "min-h-11 border-b-2 text-[15px]",
@@ -262,13 +299,17 @@ export function DrillEditor({ drill, tags: initialTags }: DrillEditorProps) {
                     : "border-transparent font-medium text-muted",
                 )}
                 onClick={() => setTab(item.id)}
+                onKeyDown={(event) => onTabKeyDown(event, item.id)}
               >
                 {item.label}
               </button>
             ))}
           </div>
 
-          <div className={cx("flex flex-col gap-5", tab !== "details" && "hidden md:flex")}>
+          <div
+            className={cx("flex flex-col gap-5", tab !== "details" && "hidden md:flex")}
+            {...panelProps("details")}
+          >
             <Section title="Details">
               <DetailFields form={form} onChange={update} errorFor={errorFor} />
               <TagPicker
@@ -281,13 +322,19 @@ export function DrillEditor({ drill, tags: initialTags }: DrillEditorProps) {
             </Section>
           </div>
 
-          <div className={cx("flex flex-col gap-5", tab !== "notes" && "hidden md:flex")}>
+          <div
+            className={cx("flex flex-col gap-5", tab !== "notes" && "hidden md:flex")}
+            {...panelProps("notes")}
+          >
             <Section title="Instructions" className="md:border-t md:border-line md:pt-5">
               <InstructionsField form={form} onChange={update} errorFor={errorFor} />
             </Section>
           </div>
 
-          <div className={cx("flex flex-col gap-5", tab !== "scoring" && "hidden md:flex")}>
+          <div
+            className={cx("flex flex-col gap-5", tab !== "scoring" && "hidden md:flex")}
+            {...panelProps("scoring")}
+          >
             <Section title="Scoring" className="md:border-t md:border-line md:pt-5">
               <ScoringFields
                 form={form}
