@@ -3,6 +3,8 @@ import type { DrillLayout, PocketName } from "@/lib/api-client";
 // Read-only table drawing in diamond units (x 0 to 8, y 0 to 4). Balls are drawn
 // larger than true scale so a drill reads at card size.
 const BALL_RADIUS = 0.16;
+// The landing zone is a fixed-size circle (ADR 0008).
+const LANDING_ZONE_RADIUS = 0.5;
 
 const POCKETS: Record<PocketName, { x: number; y: number }> = {
   top_left: { x: 0, y: 0 },
@@ -31,7 +33,14 @@ const TARGET_STYLE = {
   strokeDasharray: "0.09 0.05",
 };
 
+/** Ball ids look like ball_3; the number picks the colour. */
+export function ballNumber(id: string): number | null {
+  const match = /^ball_(\d+)$/.exec(id);
+  return match ? Number(match[1]) : null;
+}
+
 export function TableThumbnail({ layout, label }: { layout: DrillLayout; label: string }) {
+  const pocket = layout.target_pocket ? POCKETS[layout.target_pocket] : null;
   return (
     <svg
       viewBox="-0.45 -0.45 8.9 4.9"
@@ -43,43 +52,14 @@ export function TableThumbnail({ layout, label }: { layout: DrillLayout; label: 
       <rect x="-0.45" y="-0.45" width="8.9" height="4.9" rx="0.24" fill="#4A2F1B" />
       <rect x="-0.12" y="-0.12" width="8.24" height="4.24" fill="#155C3A" />
       <rect x="0" y="0" width="8" height="4" fill="#1F7A4D" />
-      {layout.targets.map((target) => {
-        if (target.kind === "pocket") {
-          const p = POCKETS[target.pocket];
-          return (
-            <circle key={target.id} cx={p.x} cy={p.y} r={0.33} {...TARGET_STYLE} fill="none" />
-          );
-        }
-        return target.shape === "circle" ? (
-          <circle
-            key={target.id}
-            cx={target.x}
-            cy={target.y}
-            r={target.radius ?? 0}
-            {...TARGET_STYLE}
-          />
-        ) : (
-          <rect
-            key={target.id}
-            x={target.x}
-            y={target.y}
-            width={target.width ?? 0}
-            height={target.height ?? 0}
-            {...TARGET_STYLE}
-          />
-        );
-      })}
-      {layout.annotations.map((a) =>
-        a.kind === "line" || a.kind === "arrow" ? (
-          <polyline
-            key={a.id}
-            points={a.points.map((p) => `${p.x},${p.y}`).join(" ")}
-            fill="none"
-            stroke="rgba(242,238,228,0.75)"
-            strokeWidth={0.05}
-            strokeDasharray={a.kind === "line" ? "0.1 0.07" : undefined}
-          />
-        ) : null,
+      {pocket && <circle cx={pocket.x} cy={pocket.y} r={0.33} {...TARGET_STYLE} fill="none" />}
+      {layout.landing_zone && (
+        <circle
+          cx={layout.landing_zone.x}
+          cy={layout.landing_zone.y}
+          r={LANDING_ZONE_RADIUS}
+          {...TARGET_STYLE}
+        />
       )}
       {layout.object_balls.map((ball) => (
         <circle
@@ -87,7 +67,7 @@ export function TableThumbnail({ layout, label }: { layout: DrillLayout; label: 
           cx={ball.x}
           cy={ball.y}
           r={BALL_RADIUS}
-          fill={BALL_COLORS[ball.number ?? 0] ?? "#E8E1CF"}
+          fill={BALL_COLORS[ballNumber(ball.id) ?? 0] ?? "#E8E1CF"}
           stroke="rgba(0,0,0,0.35)"
           strokeWidth={0.012}
         />

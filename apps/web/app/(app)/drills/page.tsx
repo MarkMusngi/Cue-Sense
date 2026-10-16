@@ -1,31 +1,23 @@
+import type { Metadata } from "next";
+
 import { DrillCard } from "@/components/drill-card";
-import { DrillFilters, type FilterParams } from "@/components/drill-filters";
+import { DrillFilters } from "@/components/drill-filters";
+import { PageHeader } from "@/components/page/page-header";
 import { EmptyState, ErrorCard } from "@/components/state-cards";
 import { getDrills, getHealth, getTags, type DrillFilters as DrillQuery } from "@/lib/api-client";
+import { readLibraryParams, type RawSearchParams } from "@/lib/drill-params";
+
+export const metadata: Metadata = { title: "Drills · Cue Sense" };
 
 // Render on every request so the page always shows current API data.
 export const dynamic = "force-dynamic";
 
-type SearchParams = Record<string, string | string[] | undefined>;
-
-function first(value: string | string[] | undefined): string | undefined {
-  const v = Array.isArray(value) ? value[0] : value;
-  return v === "" ? undefined : v;
-}
-
-function readParams(raw: SearchParams): FilterParams {
-  const status = first(raw.status);
-  return {
-    status: status === "draft" || status === "active" || status === "archived" ? status : undefined,
-    difficulty: first(raw.difficulty),
-    tag_id: first(raw.tag_id),
-    search: first(raw.search),
-    sort: first(raw.sort),
-  };
-}
-
-export default async function HomePage({ searchParams }: { searchParams: Promise<SearchParams> }) {
-  const params = readParams(await searchParams);
+export default async function DrillsPage({
+  searchParams,
+}: {
+  searchParams: Promise<RawSearchParams>;
+}) {
+  const params = readLibraryParams(await searchParams);
   const query: DrillQuery = {
     status: params.status,
     difficulty: params.difficulty ? Number(params.difficulty) : undefined,
@@ -42,17 +34,19 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
       )
     : [];
   const isFiltered = Object.values(query).some((v) => v !== undefined);
+  const total = drills.ok ? drills.data.total : 0;
 
   return (
-    <main className="mx-auto flex w-full max-w-[1180px] flex-col gap-6 px-[clamp(16px,4vw,48px)] pb-12 pt-8">
-      <div>
-        <h1 className="font-display text-[44px] font-bold leading-none">Drills</h1>
+    <div className="mx-auto flex max-w-5xl flex-col gap-6 p-4 md:p-8">
+      <PageHeader title="Drills">
         {drills.ok && (
-          <p className="mt-1.5 text-[15px] text-muted" data-testid="drill-count">
-            {drills.data.total} {drills.data.total === 1 ? "drill" : "drills"}
+          <p className="text-sm text-muted" data-testid="drill-count">
+            {items.length < total
+              ? `Showing ${items.length} of ${total} drills`
+              : `${total} ${total === 1 ? "drill" : "drills"}`}
           </p>
         )}
-      </div>
+      </PageHeader>
 
       <DrillFilters params={params} tags={tags.ok ? tags.data.items : []} />
 
@@ -71,7 +65,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
         </ul>
       )}
 
-      <footer className="text-[13px] text-muted">
+      <footer className="text-sm text-muted">
         {health.ok ? (
           <p data-testid="health-status">
             API <span data-testid="health-api">{health.data.status}</span> · database{" "}
@@ -83,6 +77,6 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
           </p>
         )}
       </footer>
-    </main>
+    </div>
   );
 }

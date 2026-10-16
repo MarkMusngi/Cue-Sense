@@ -22,7 +22,7 @@ function hrefWithStatus(params: FilterParams, status: DrillStatus | undefined): 
     if (value) query.set(key, value);
   }
   const text = query.toString();
-  return text ? `/?${text}` : "/";
+  return text ? `/drills?${text}` : "/drills";
 }
 
 const SELECT_CLASS = "h-10 rounded-[10px] border border-line bg-surface px-2.5 text-sm text-text";

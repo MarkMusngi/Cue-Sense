@@ -25,28 +25,15 @@ export type PocketName =
   | "bottom_middle"
   | "bottom_right";
 
-// Layout JSON in diamond units (README decision 1).
+// Layout JSON, schema version 2, in diamond units (README decision 1, ADR 0008).
 export type DrillLayout = {
   schema_version: number;
-  cue_ball: { id: string; x: number; y: number; ball_in_hand: string };
-  object_balls: { id: string; number: number | null; x: number; y: number }[];
-  targets: (
-    | { id: string; kind: "pocket"; pocket: PocketName; ball_id?: string | null }
-    | {
-        id: string;
-        kind: "zone";
-        shape: "circle" | "rect";
-        x: number;
-        y: number;
-        radius?: number | null;
-        width?: number | null;
-        height?: number | null;
-      }
-  )[];
-  annotations: (
-    | { id: string; kind: "arrow" | "line"; points: { x: number; y: number }[] }
-    | { id: string; kind: "text"; x: number; y: number; text: string }
-  )[];
+  cue_ball: { id: string; x: number; y: number };
+  object_balls: { id: string; x: number; y: number }[];
+  /** A fixed-size circle (radius 0.5 diamonds) centred here. */
+  landing_zone?: { x: number; y: number } | null;
+  cue_spin?: { x: number; y: number } | null;
+  target_pocket?: PocketName | null;
 };
 
 export type DrillScoring = {

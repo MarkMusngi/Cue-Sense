@@ -66,5 +66,7 @@ jobs:
         run: pnpm --filter web lint
       - name: Type-check
         run: pnpm --filter web typecheck
+      - name: Test
+        run: pnpm --filter web test
       - name: Build
         run: pnpm --filter web build

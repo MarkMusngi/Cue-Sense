@@ -11,6 +11,7 @@ Project context for Claude Code. This file summarizes and points to other docs; 
 | [docs/architecture.md](docs/architecture.md) | Data model, API, drill maker design, roadmap, testing strategy |
 | [docs/prompts.md](docs/prompts.md) | Build order and prompts |
 | [docs/decisions/](docs/decisions/) | ADRs (see [docs/decisions/README.md](docs/decisions/README.md)) |
+| [docs/design-system.md](docs/design-system.md) | Web tokens, contrast rules, shared controls, `data-testid` rules |
 | [docs/setup-github-and-jira.md](docs/setup-github-and-jira.md) | GitHub Actions, branch protection and Jira setup |
 
 A billiards training app: drill maker, practice sessions, progress dashboard. Current scope is Phases 0 to 3.
