@@ -23,6 +23,8 @@ services:
       - "8000:8000"
     volumes:
       - ./apps/api:/app
+      # Shared test fixtures (also run by the web app later).
+      - ./fixtures:/fixtures:ro
     depends_on:
       postgres:
         condition: service_healthy

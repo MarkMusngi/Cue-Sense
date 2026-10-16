@@ -42,6 +42,7 @@ def make_user(db: Session, email: str | None = None) -> User:
 
 def make_drill(db: Session, owner: User, slug: str | None = None, **fields: Any) -> Drill:
     """A drill whose current version is version 1, created in one transaction."""
+    scoring = fields.pop("scoring", SCORING)
     drill = Drill(
         owner_id=owner.id,
         title=fields.pop("title", "Straight-in"),
@@ -51,7 +52,7 @@ def make_drill(db: Session, owner: User, slug: str | None = None, **fields: Any)
     )
     db.add(drill)
     db.flush()
-    version = make_version(db, drill, version_number=1)
+    version = make_version(db, drill, version_number=1, scoring=scoring)
     drill.current_drill_version_id = version.id
     db.flush()
     return drill
@@ -86,10 +87,10 @@ def make_drill_tag(db: Session, owner: User, drill: Drill, tag: Tag) -> DrillTag
     return link
 
 
-def make_session(db: Session, owner: User, ended: bool = False) -> PracticeSession:
-    practice_session = PracticeSession(
-        owner_id=owner.id, ended_at=datetime.now(UTC) if ended else None
-    )
+def make_session(db: Session, owner: User, ended: bool = False, **fields: Any) -> PracticeSession:
+    if ended:
+        fields.setdefault("ended_at", datetime.now(UTC))
+    practice_session = PracticeSession(owner_id=owner.id, **fields)
     db.add(practice_session)
     db.flush()
     return practice_session
