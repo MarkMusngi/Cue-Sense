@@ -6,7 +6,7 @@ Use these in Claude Code, one at a time. Review the diff and commit after each. 
 
 ## Status
 
-Last checked against `main` at the merge of the drill library (CUE-15).
+Last checked against `main` at the merge of the Playwright harness (CUE-19), plus the table editor (CUE-21).
 
 | Prompt | Status | Notes |
 |---|---|---|
@@ -16,7 +16,7 @@ Last checked against `main` at the merge of the drill library (CUE-15).
 | 3 Database models and migration | Done | |
 | 4 Layout validation service | Done | Rules are now layout schema v2 (CUE-12, ADR 0008) |
 | 5 Drill CRUD API | Done | CUE-10 |
-| 6 Table editor component | Partly | PR 21 (CUE-11) is open and still edits v1 layouts, which the API now rejects |
+| 6 Table editor component | Done | CUE-21, on layout v2 (`docs/table-editor.md`). PR 21 (CUE-11, layout v1) was closed and replaced |
 | 7 Drill editor and detail screens | Partly | Library screen done (CUE-15); editor and detail not started |
 | 8 Session runner and history | Partly | API and set progress done (CUE-14); screens not started |
 | 9 End-to-end tests | Todo | Playwright harness and CI `e2e` job are in place (CUE-18); the four journeys wait for the editor and runner |
@@ -43,12 +43,11 @@ Done: prompts 0 to 5 (backend foundation), the design system, the drill library 
 
 Next:
 
-1. Prompt 6: finish the table editor on layout v2 (update PR 21 or replace it). Nothing that saves layouts from the web works until this lands.
-2. Prompt 7: drill editor and detail screens.
-3. Prompt 8: session runner and history.
-4. Prompt 9: end-to-end tests, once the editor and runner exist.
-5. Prompt 11 (authentication) and Prompt 10 (dashboard), in either order, once real sessions exist.
-6. Then video ingestion and vision (Phases 4 and 5), which are out of scope until the MVP is done.
+1. Prompt 7: drill editor and detail screens.
+2. Prompt 8: session runner and history.
+3. Prompt 9: end-to-end tests, once the editor and runner exist.
+4. Prompt 11 (authentication) and Prompt 10 (dashboard), in either order, once real sessions exist.
+5. Then video ingestion and vision (Phases 4 and 5), which are out of scope until the MVP is done.
 
 Separately, record footage following section 8 of the architecture doc. This needs no code and can happen at any time; the earlier the better, because it is the data Phase 5 needs.
 
@@ -191,9 +190,9 @@ Rules:
 Give a plan first, then implement.
 ```
 
-## Prompt 6: Table editor component (Opus 5.5 for the design note, Sonnet 5.5 to build) (partly done)
+## Prompt 6: Table editor component (Opus 5.5 for the design note, Sonnet 5.5 to build) (done)
 
-PR 21 (CUE-11) started this against layout v1. Update it, or replace it, so it reads and writes layout v2. Do not merge it before then: the API returns 422 for a v1 layout.
+Done in CUE-21 on layout v2. The first attempt (PR 21, CUE-11) used layout v1, which the API rejects, so it was closed and replaced; the design note is `docs/table-editor.md`. The prompt below is kept for reference.
 
 ```
 Build, or finish, the TableEditor React component in apps/web following

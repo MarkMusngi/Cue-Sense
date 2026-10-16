@@ -8,6 +8,7 @@ import { ballNumber, TableThumbnail } from "./table-thumbnail";
 
 const LAYOUT: DrillLayout = {
   schema_version: 2,
+  table: { kind: "pool", size_ft: 9 },
   cue_ball: { id: "ball_0", x: 2, y: 2 },
   object_balls: [{ id: "ball_1", x: 5.5, y: 1.2 }],
   landing_zone: { x: 3, y: 2 },
@@ -28,6 +29,7 @@ describe("TableThumbnail", () => {
   it("draws a layout with no optional parts", () => {
     const bare: DrillLayout = {
       schema_version: 2,
+      table: { kind: "pool", size_ft: 9 },
       cue_ball: { id: "ball_0", x: 2, y: 2 },
       object_balls: [],
     };
