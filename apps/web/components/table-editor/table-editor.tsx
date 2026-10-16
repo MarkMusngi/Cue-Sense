@@ -152,6 +152,12 @@ export function TableEditor({ layout, onChange, readOnly = false }: TableEditorP
     const drag = dragRef.current;
     const pointer = pointerToTable(event);
     if (!drag || drag.pointerId !== event.pointerId || !pointer) return;
+    // No button held: the release happened where no pointerup reached us, so finish
+    // the drag instead of letting the ball follow a free-moving pointer.
+    if (event.pointerType !== "touch" && event.buttons === 0) {
+      endDrag(event, true);
+      return;
+    }
     const target = { x: pointer.x - drag.offset.x, y: pointer.y - drag.offset.y };
     const base = history.getPresent();
     if (drag.id === LANDING_ZONE_ID) {
@@ -348,6 +354,7 @@ export function TableEditor({ layout, onChange, readOnly = false }: TableEditorP
           onPointerMove={onPointerMove}
           onPointerUp={(event) => endDrag(event, true)}
           onPointerCancel={(event) => endDrag(event, false)}
+          onLostPointerCapture={(event) => endDrag(event, false)}
         >
           <TableLayers layout={shown} radius={radius} selected={active} tool={tool} handlers={handlers} />
         </svg>

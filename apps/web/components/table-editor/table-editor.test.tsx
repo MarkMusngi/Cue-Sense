@@ -283,11 +283,11 @@ describe("TableEditor", () => {
     // Ball 1 is at (5.5, 1.2): client (595, 165).
     act(() => {
       fireEvent.pointerDown(ball, { clientX: 595, clientY: 165, pointerId: 1 });
-      fireEvent.pointerMove(svg, { clientX: 640, clientY: 165, pointerId: 1 });
+      fireEvent.pointerMove(svg, { clientX: 640, clientY: 165, pointerId: 1, buttons: 1 });
     });
     expect(onChange).not.toHaveBeenCalled();
     act(() => {
-      fireEvent.pointerMove(svg, { clientX: 647, clientY: 168, pointerId: 1 });
+      fireEvent.pointerMove(svg, { clientX: 647, clientY: 168, pointerId: 1, buttons: 1 });
       fireEvent.pointerUp(svg, { clientX: 647, clientY: 168, pointerId: 1 });
     });
 
@@ -322,6 +322,61 @@ describe("TableEditor", () => {
     expect(balls[1]).toEqual({ id: "ball_2", x: 4.3, y: 2 });
   });
 
+  it("drops the drag when pointer capture is lost, leaving the ball where it was", () => {
+    const onChange = vi.fn();
+    render(<Harness onChange={onChange} />);
+    const svg = screen.getByTestId("table-editor-svg");
+    svg.getBoundingClientRect = () =>
+      ({ left: 0, top: 0, width: 890, height: 490, right: 890, bottom: 490 }) as DOMRect;
+    const ball = screen.getByTestId("table-editor-ball-1");
+
+    act(() => {
+      fireEvent.pointerDown(ball, { clientX: 595, clientY: 165, pointerId: 1 });
+      fireEvent.pointerMove(svg, { clientX: 660, clientY: 200, pointerId: 1, buttons: 1 });
+    });
+    expect(ball).toHaveAttribute("aria-label", expect.stringContaining("x 6."));
+    act(() => {
+      fireEvent.lostPointerCapture(svg, { pointerId: 1 });
+    });
+    // A later move with no drag in progress changes nothing.
+    act(() => {
+      fireEvent.pointerMove(svg, { clientX: 700, clientY: 300, pointerId: 1, buttons: 1 });
+    });
+
+    expect(onChange).not.toHaveBeenCalled();
+    expect(screen.getByTestId("table-editor-ball-1")).toHaveAttribute(
+      "aria-label",
+      "Ball 1 at x 5.50, y 1.20",
+    );
+  });
+
+  it("finishes the drag when a move arrives with no button held", () => {
+    const onChange = vi.fn();
+    render(<Harness onChange={onChange} />);
+    const svg = screen.getByTestId("table-editor-svg");
+    svg.getBoundingClientRect = () =>
+      ({ left: 0, top: 0, width: 890, height: 490, right: 890, bottom: 490 }) as DOMRect;
+
+    act(() => {
+      fireEvent.pointerDown(screen.getByTestId("table-editor-ball-1"), {
+        clientX: 595,
+        clientY: 165,
+        pointerId: 1,
+      });
+      fireEvent.pointerMove(svg, { clientX: 645, clientY: 165, pointerId: 1, buttons: 1 });
+      // The release happened outside the window: only a move with buttons 0 arrives.
+      fireEvent.pointerMove(svg, { clientX: 700, clientY: 300, pointerId: 1, buttons: 0 });
+    });
+    expect(onChange).toHaveBeenCalledTimes(1);
+    expect(lastLayout(onChange).object_balls[0]).toEqual({ id: "ball_1", x: 6, y: 1.2 });
+
+    // The ball no longer follows the pointer.
+    act(() => {
+      fireEvent.pointerMove(svg, { clientX: 800, clientY: 400, pointerId: 1, buttons: 0 });
+    });
+    expect(onChange).toHaveBeenCalledTimes(1);
+  });
+
   it("does not let a dragged ball overlap another", () => {
     const onChange = vi.fn();
     render(
@@ -341,7 +396,7 @@ describe("TableEditor", () => {
         clientY: 165,
         pointerId: 1,
       });
-      fireEvent.pointerMove(svg, { clientX: 445, clientY: 345, pointerId: 1 });
+      fireEvent.pointerMove(svg, { clientX: 445, clientY: 345, pointerId: 1, buttons: 1 });
       fireEvent.pointerUp(svg, { clientX: 445, clientY: 345, pointerId: 1 });
     });
 
