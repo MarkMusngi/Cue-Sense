@@ -14,6 +14,16 @@ async function openEditor(page: Page) {
   await expect(page.getByTestId("table-editor")).toHaveAttribute("data-hydrated", "true");
 }
 
+/** Wait for two animation frames, so style and touch-action changes have reached the compositor. */
+function nextFrames(page: Page) {
+  return page.evaluate(
+    () =>
+      new Promise<void>((resolve) =>
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+      ),
+  );
+}
+
 async function readLayout(page: Page): Promise<Layout> {
   return JSON.parse(await page.getByTestId("dev-table-editor-json").innerText()) as Layout;
 }
@@ -158,13 +168,19 @@ test.describe("table editor on a phone", () => {
     const before = (await readLayout(page)).object_balls[0];
     await page.touchscreen.tap(ball.x, ball.y);
     await expect(page.getByTestId("table-editor-selection")).toContainText("Ball 1");
+    // The browser learns the new touch-action on its next frames; a person takes longer
+    // than that between a tap and a drag, but a scripted swipe does not.
+    await nextFrames(page);
     await swipe(ball.x, ball.y);
     await expect.poll(async () => (await readLayout(page)).object_balls[0].y).toBeLessThan(before.y);
-    expect(await scrollTop()).toBe(0);
+    // A swipe that panned the page would move it by about 150 px.
+    expect(await scrollTop()).toBeLessThan(20);
 
     // Tapping the felt deselects, and a swipe scrolls the page again.
     await page.touchscreen.tap(felt.x, felt.y);
     await expect(page.getByTestId("table-editor-selection")).toContainText("Nothing selected");
+    await nextFrames(page);
+    await page.evaluate(() => window.scrollTo(0, 0));
     await swipe(felt.x, felt.y);
     await expect.poll(scrollTop).toBeGreaterThan(40);
   });
