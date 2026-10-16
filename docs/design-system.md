@@ -75,4 +75,6 @@ Playwright and component tests find elements by `data-testid`, never by CSS clas
 | `CueSpin` | Cue ball face with the hit point from a layout's `cue_spin`; an image with a spoken description. |
 | `TextField` | Label, hint and error wired with `aria-describedby`; an error sets `aria-invalid`. |
 | `ThemeToggle` | Switches and remembers the theme. |
+| `LinkButton` | A link that looks like a `Button` (`variant`), for actions that go to another page. Its classes come from `button-styles.ts`, which server components can use; `Button` itself is a client component. |
+| `TextArea` | Like `TextField`, for several lines: label, hint and error tied to the box. |
 | `TableEditor` | The drill layout editor and read-only viewer (`components/table-editor/`). Controlled by `layout` and `onChange`; see `docs/table-editor.md`. Ids start with `table-editor-`: `table-editor-tool-<select\|ball\|pocket\|zone>`, `table-editor-snap`, `-undo`, `-redo`, `-mirror-h`, `-mirror-v`, `-reset`, `-delete`, `-selection`, `-ball-<n>`, `-pocket-<name>`, `-landing-zone`, `-spin`. A page with two editors on it must scope ids to the editor. |
