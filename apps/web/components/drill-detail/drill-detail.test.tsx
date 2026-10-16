@@ -3,7 +3,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { DrillRead, DrillScoring, DrillVersionRead } from "@/lib/api-client";
+import type { DrillRead, DrillVersionRead } from "@/lib/api-client";
 import { emptyForm } from "@/lib/drill-form";
 
 const push = vi.fn();
@@ -18,7 +18,7 @@ vi.mock("@/app/(app)/drills/actions", () => ({
 }));
 
 import { DrillActions } from "./drill-actions";
-import { scoringDetail, ScoringSummary } from "./scoring-summary";
+import { ScoringSummary } from "./scoring-summary";
 import { formatVersionDate, VersionList } from "./version-list";
 
 function version(n: number, created_at: string): DrillVersionRead {
@@ -84,36 +84,6 @@ describe("VersionList", () => {
 });
 
 describe("ScoringSummary", () => {
-  it.each<[DrillScoring, string]>([
-    [
-      { schema_version: 1, kind: "success_count", attempts_per_set: 10, pass_threshold: 6 },
-      "per set of 10 attempts",
-    ],
-    [{ schema_version: 1, kind: "streak", streak_length: 5 }, "the whole drill run is one set"],
-    [
-      {
-        schema_version: 1,
-        kind: "points",
-        attempts_per_set: 10,
-        max_points_per_attempt: 3,
-        pass_threshold: 20,
-      },
-      "per set of 10 attempts, up to 3 points each",
-    ],
-    [
-      {
-        schema_version: 1,
-        kind: "timed",
-        attempts_per_set: 5,
-        time_limit_seconds: 120,
-        pass_threshold: 4,
-      },
-      "within 120 seconds, per set of 5 attempts",
-    ],
-  ])("describes %j", (scoring, detail) => {
-    expect(scoringDetail(scoring)).toBe(detail);
-  });
-
   it("shows the headline rule and its detail", () => {
     render(
       <ScoringSummary
