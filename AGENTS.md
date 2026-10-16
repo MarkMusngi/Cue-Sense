@@ -99,8 +99,9 @@ pnpm --filter web typecheck
 pnpm --filter web build
 pnpm --filter web test                  # Vitest: pure lib tests and component tests (jsdom)
 
-# End-to-end
-# Playwright: not available yet (added with Prompt 7)
+# End-to-end (Playwright, specs in apps/web/e2e; needs the stack running)
+pnpm --filter web exec playwright install chromium   # first time only
+pnpm --filter web e2e
 ```
 
 ## 8. Testing

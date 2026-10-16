@@ -19,7 +19,7 @@ Last checked against `main` at the merge of the drill library (CUE-15).
 | 6 Table editor component | Partly | PR 21 (CUE-11) is open and still edits v1 layouts, which the API now rejects |
 | 7 Drill editor and detail screens | Partly | Library screen done (CUE-15); editor and detail not started |
 | 8 Session runner and history | Partly | API and set progress done (CUE-14); screens not started |
-| 9 End-to-end tests | Todo | |
+| 9 End-to-end tests | Todo | Playwright harness and CI `e2e` job are in place (CUE-18); the four journeys wait for the editor and runner |
 | 10 Dashboard and `/stats` | Todo | Contract written in `docs/stats-contract.md` |
 | 11 Authentication | Todo | Part of Phase 3 |
 
@@ -259,13 +259,13 @@ Plan first, then implement.
 
 ## Prompt 9: End-to-end tests (Sonnet 5.5)
 
-Do this after Prompts 6 to 8. Playwright is not set up yet, and adding it to the GitHub Actions workflow needs your explicit approval (`AGENTS.md` section 11).
+Do this after Prompts 6 to 8. The Playwright harness is already set up (CUE-18): config in `apps/web/playwright.config.ts`, specs in `apps/web/e2e`, run with `pnpm --filter web e2e` against the running stack, and a CI `e2e` job in `.github/workflows/ci.yml`. New specs go in that folder and run in that job; no workflow change is needed.
 
 ```
 Write Playwright tests for: (1) create a drill by placing balls and saving,
 (2) edit it and confirm a new version appears, (3) start a session, log 10
 attempts, finish, and confirm history totals, (4) a validation error appears when
-a ball overlaps another. Add them to the GitHub Actions workflow. Use stable
+a ball overlaps another. Put them in apps/web/e2e. Use stable
 data-testid attributes; do not rely on CSS classes.
 ```
 
