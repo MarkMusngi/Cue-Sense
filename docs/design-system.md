@@ -75,3 +75,4 @@ Playwright and component tests find elements by `data-testid`, never by CSS clas
 | `CueSpin` | Cue ball face with the hit point from a layout's `cue_spin`; an image with a spoken description. |
 | `TextField` | Label, hint and error wired with `aria-describedby`; an error sets `aria-invalid`. |
 | `ThemeToggle` | Switches and remembers the theme. |
+| `TableEditor` | The drill layout editor and read-only viewer (`components/table-editor/`). Controlled by `layout` and `onChange`; see `docs/table-editor.md`. Ids start with `table-editor-`: `table-editor-tool-<select\|ball\|pocket\|zone>`, `table-editor-snap`, `-undo`, `-redo`, `-mirror-h`, `-mirror-v`, `-reset`, `-delete`, `-selection`, `-ball-<n>`, `-pocket-<name>`, `-landing-zone`, `-spin`. A page with two editors on it must scope ids to the editor. |
