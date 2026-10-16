@@ -82,6 +82,23 @@ describe("TableEditor", () => {
     expect(container.querySelectorAll("[role=button]")).toHaveLength(0);
   });
 
+  it("lets the page pan until something is selected or a tool is active", async () => {
+    const user = userEvent.setup();
+    render(<TableEditor layout={START} onChange={() => {}} />);
+    const svg = screen.getByTestId("table-editor-svg");
+    expect(svg).not.toHaveClass("touch-none");
+
+    screen.getByTestId("table-editor-ball-1").focus();
+    await user.keyboard("{Enter}");
+    expect(svg).toHaveClass("touch-none");
+
+    await user.keyboard("{Escape}");
+    expect(svg).not.toHaveClass("touch-none");
+
+    await user.click(screen.getByTestId("table-editor-tool-ball"));
+    expect(svg).toHaveClass("touch-none");
+  });
+
   it("selects a ball with Enter and nudges it with the arrow keys", async () => {
     const user = userEvent.setup();
     const onChange = vi.fn();

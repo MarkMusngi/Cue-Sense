@@ -127,6 +127,48 @@ test.describe("table editor, mouse and keyboard", () => {
 test.describe("table editor on a phone", () => {
   test.use({ viewport: { width: 375, height: 812 }, hasTouch: true });
 
+  test("swiping scrolls the page until a ball is selected, then drags it", async ({
+    page,
+  }) => {
+    await openEditor(page);
+    // Playwright can only tap, so drive real touch swipes through the browser's input layer.
+    const cdp = await page.context().newCDPSession(page);
+    const swipe = async (x: number, y: number) => {
+      await cdp.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ x, y }] });
+      for (let step = 1; step <= 12; step++) {
+        await cdp.send("Input.dispatchTouchEvent", {
+          type: "touchMove",
+          touchPoints: [{ x, y: y - step * 14 }],
+        });
+        await page.waitForTimeout(16);
+      }
+      await cdp.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+    };
+    const scrollTop = () => page.evaluate(() => document.scrollingElement?.scrollTop ?? 0);
+
+    // Empty felt: nothing there, so the browser pans the page.
+    const felt = await tablePoint(page, 4, 3.4);
+    expect(await scrollTop()).toBe(0);
+    await swipe(felt.x, felt.y);
+    await expect.poll(scrollTop).toBeGreaterThan(40);
+
+    // Tap a ball to select it: now the table stops panning, so a touch drag moves it.
+    await page.evaluate(() => window.scrollTo(0, 0));
+    const ball = await centre(page.getByTestId("table-editor").getByTestId("table-editor-ball-1"));
+    const before = (await readLayout(page)).object_balls[0];
+    await page.touchscreen.tap(ball.x, ball.y);
+    await expect(page.getByTestId("table-editor-selection")).toContainText("Ball 1");
+    await swipe(ball.x, ball.y);
+    await expect.poll(async () => (await readLayout(page)).object_balls[0].y).toBeLessThan(before.y);
+    expect(await scrollTop()).toBe(0);
+
+    // Tapping the felt deselects, and a swipe scrolls the page again.
+    await page.touchscreen.tap(felt.x, felt.y);
+    await expect(page.getByTestId("table-editor-selection")).toContainText("Nothing selected");
+    await swipe(felt.x, felt.y);
+    await expect.poll(scrollTop).toBeGreaterThan(40);
+  });
+
   test("fits the screen and works by tapping", async ({ page }) => {
     await openEditor(page);
 
