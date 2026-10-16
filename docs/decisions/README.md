@@ -25,3 +25,4 @@ Short records of decisions that deviate from, or add to, `docs/architecture.md`.
 | [0005](0005-role-foreign-keys-and-kind-discriminator.md) | Role-prefixed foreign keys and `kind` as the discriminator key | Proposed |
 | [0006](0006-nine-foot-table-only.md) | 9 ft table only | Accepted |
 | [0007](0007-uuid-primary-keys.md) | uuid primary keys | Accepted |
+| [0008](0008-simplified-layout-schema-v2.md) | Simplified layout schema v2 | Proposed |

@@ -47,7 +47,7 @@ Phases 0 to 3 are the MVP. Phase 4 needs preparation now only in how you record 
 
 - **Drill:** a named, reusable exercise with difficulty, tags and a current version.
 - **Drill version:** immutable snapshot of layout, instructions and scoring. Saving an edit creates a new version.
-- **Layout:** balls, targets and annotations on a table.
+- **Layout:** balls, a landing zone, cue spin and a target pocket on a table.
 - **Scoring rule:** how attempts in a drill run are judged.
 
 ### 4.2 Coordinate system
@@ -62,67 +62,60 @@ The playing surface uses **diamond units**: `x` from 0 to 8 along the long rail,
 
 ### 4.3 Layout JSON (stored as JSONB, validated by Pydantic)
 
+Schema version 2 is the latest (ADR 0008). Version 1 documents stay stored as they are and are upgraded to version 2 on read (ADR 0002); the mapping is lossy and described below.
+
 ```json
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "table": { "kind": "pool", "size_ft": 9 },
-  "cue_ball": { "id": "ball_0", "x": 2.0, "y": 2.0, "ball_in_hand": "none" },
+  "cue_ball": { "id": "ball_0", "x": 2.0, "y": 2.0 },
   "object_balls": [
-    { "id": "ball_1", "number": 1, "x": 5.5, "y": 1.2 }
+    { "id": "ball_1", "x": 5.5, "y": 1.2 }
   ],
-  "targets": [
-    { "id": "target_1", "kind": "pocket", "pocket": "top_right", "ball_id": "ball_1" },
-    { "id": "target_2", "kind": "zone", "shape": "circle", "ball_id": "ball_0",
-      "x": 3.0, "y": 2.0, "radius": 0.4, "label": "Cue ball finish" },
-    { "id": "target_3", "kind": "zone", "shape": "rect", "ball_id": "ball_0",
-      "x": 6.0, "y": 0.0, "width": 2.0, "height": 1.0, "label": "Foot-rail box" }
-  ],
-  "annotations": [
-    { "id": "annotation_1", "kind": "arrow",
-      "points": [{ "x": 2.0, "y": 2.0 }, { "x": 5.5, "y": 1.2 }], "label": "Aim line" },
-    { "id": "annotation_2", "kind": "line",
-      "points": [{ "x": 5.5, "y": 1.2 }, { "x": 8.0, "y": 0.0 }] },
-    { "id": "annotation_3", "kind": "text", "x": 1.0, "y": 0.5, "text": "Stun, no side spin" }
-  ]
+  "landing_zone": { "x": 3.0, "y": 2.0 },
+  "cue_spin": { "x": 0.0, "y": -0.4 },
+  "target_pocket": "top_right"
 }
 ```
 
 - `table.kind` is `pool` only for the MVP (open decision 7.1).
-- `cue_ball.ball_in_hand` is `none`, `anywhere` or `behind_head_string`. When it is not `none`, `x` and `y` are a suggested position. For `behind_head_string`, that position must satisfy `x <= 2`.
-- Object ball `number` is optional (generic "any ball" drills) and unique when present.
-- Zones have shape `circle` (`x`, `y`, `radius`) or `rect` (`x`, `y` top-left corner, `width`, `height`). The optional `ball_id` names the ball that must finish in the zone.
-- Arrows and lines take a `points` list with at least 2 points (for bank and kick paths). Every position is an `{x, y}` object.
-- Element ids follow `<kind>_<n>`; the cue ball is always `ball_0`. Ids are never renumbered on save, so they stay stable across versions.
+- Balls have an `id` and a position. There is no ball in hand and no ball number.
+- `landing_zone` is optional: one fixed-size circle (radius 0.5 diamonds, a constant in code, not stored) centred on `x`, `y`. Only the centre must be on the table.
+- `cue_spin` is optional: where the cue tip meets the cue ball. `x` is side (-1 left to 1 right) and `y` is vertical (-1 bottom to 1 top), and the point must satisfy `x² + y² <= 1`.
+- `target_pocket` is optional: one of `top_left`, `top_middle`, `top_right`, `bottom_left`, `bottom_middle`, `bottom_right`. A drill has one.
+- Element ids follow `ball_<n>`; the cue ball is always `ball_0`. Ids are never renumbered on save, so they stay stable across versions.
 
 **Validation rules (server-side, always, after rounding to 3 decimals):**
 
 - All balls fully inside the cushions: position plus radius within bounds, with a tolerance of 0.002 so balls frozen to the rail pass.
 - No two balls overlap: centre distance at least 2 x radius minus the same tolerance, so frozen balls pass.
-- Exactly one cue ball; 0 to 15 object balls; unique ids; unique numbers where present.
-- Every `ball_id` in a target resolves to the cue ball or an existing object ball. Pocket targets reference object balls only.
-- Annotation count capped (for example 20).
-- `schema_version` required and equal to the latest version on write.
+- Exactly one cue ball; 0 to 15 object balls; unique ids.
+- The landing zone centre is on the table.
+- The spin point is inside the unit disc, and the pocket name is one of the six.
+- `schema_version` required and equal to the latest version on write. Writes accept version 2 only.
 - Errors are structured: `code`, `message`, and `path` to the offending element, so the editor can highlight it.
 
 **Error codes.** The codes and the path format are a contract the editor relies on. `path` is a list of keys and indexes into the input JSON, for example `["object_balls", 2]`. All errors are returned together, ordered by the rows below, then by element order in the input. Schema errors are returned alone, because the other rules need a well-formed layout.
 
 | `code` | Meaning | `path` |
 |---|---|---|
-| `schema_invalid` | Wrong shape or type: missing or unknown key, bad value, unsupported table size | Offending field |
+| `schema_invalid` | Wrong shape or type: missing or unknown key (including version 1 fields), bad value, spin outside the disc, unknown pocket, unsupported table size | Offending field |
 | `unsupported_schema_version` | `schema_version` is not the latest | `["schema_version"]` |
-| `invalid_id` | Id does not follow `<kind>_<n>`, or the cue ball is not `ball_0` | Element's `id` |
+| `invalid_id` | Id does not follow `ball_<n>`, or the cue ball is not `ball_0` | Element's `id` |
 | `duplicate_id` | Id used twice | Later element's `id` |
 | `too_many_object_balls` | More than 15 object balls | `["object_balls"]` |
-| `duplicate_ball_number` | Ball number used twice | Later ball's `number` |
 | `ball_out_of_bounds` | Ball not fully inside the cushions | Ball |
 | `balls_overlap` | Two balls overlap | Later ball of the pair |
-| `cue_ball_not_behind_head_string` | `behind_head_string` with `x > 2` | `["cue_ball", "x"]` |
-| `unknown_ball_reference` | Target `ball_id` matches no ball | Target's `ball_id` |
-| `pocket_target_cue_ball` | Pocket target references the cue ball | Target's `ball_id` |
-| `position_out_of_bounds` | Zone or annotation not on the table | Zone or annotation |
-| `too_many_annotations` | More than 20 annotations | `["annotations"]` |
+| `position_out_of_bounds` | Landing zone centre not on the table | `["landing_zone"]` |
 
-**Schema versions (ADR 0002).** Layout and scoring JSON both carry `schema_version`. Stored documents are never rewritten and never re-validated against newer rules. Pure upgrade functions (v1 to v2 and so on) live in `layout_service` and the scoring service and run on read, so the API always returns the latest version. Writes accept only the latest version. Each historical version keeps a test fixture.
+**Upgrading version 1.** A pure function in the layout service maps a stored version 1 layout to version 2 whenever it is read, and never changes the stored row:
+
+- `ball_in_hand` and ball numbers are dropped.
+- The first pocket target becomes `target_pocket`.
+- The first zone becomes `landing_zone`, centred on the circle's centre or the rect's centre.
+- Every other target, all annotations and all labels are dropped.
+
+Saving a drill compares the upgraded stored layout with the incoming one, so resaving an old drill unchanged does not add a version.
 
 ### 4.4 Scoring rules
 
@@ -329,8 +322,8 @@ Build order:
 1. Render felt, cushions, diamonds and six pockets for the chosen table size.
 2. Drag the cue ball and object balls, clamped inside cushions with overlap prevention (frozen balls allowed within the validation tolerance).
 3. Add and remove balls; keyboard delete.
-4. Pocket targets, and circle and rect zone targets.
-5. Arrow, line and text annotations.
+4. Target pocket (tap a pocket) and the landing zone (drag a fixed-size circle).
+5. Cue spin: a drawn cue ball face with a draggable hit point.
 6. Snap toggle, undo and redo, reset.
 7. Mirror horizontally and vertically (fast way to create drill variants via duplicate).
 8. Touch support using pointer events.

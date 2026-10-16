@@ -1,7 +1,8 @@
-"""Pydantic models for the layout JSON (docs/architecture.md section 4.3).
+"""Pydantic models for the latest layout JSON, schema version 2 (docs/architecture.md 4.3).
 
-These models check shape, types and single-element values (such as zone sizes). Rules
-that span elements (bounds, overlaps, references, ids) live in app.services.layout_service.
+These models check shape, types and single-element values (such as the spin disc). Rules
+that span elements (bounds, overlaps, ids) live in app.services.layout_service. Version 1
+documents are read through app.schemas.layout_v1 and upgraded (ADR 0002, ADR 0008).
 """
 
 from typing import Annotated, Literal, Self
@@ -13,12 +14,17 @@ def _round_to_millis(value: float) -> float:
     return round(value, 3)
 
 
-# Positions and sizes in diamond units, rounded to 3 decimals before any rule runs.
+# Positions in diamond units, rounded to 3 decimals before any rule runs.
 DiamondUnits = Annotated[float, AfterValidator(_round_to_millis)]
+# Spin offsets are unitless (-1 to 1 across the cue ball face), rounded the same way.
+SpinOffset = Annotated[float, AfterValidator(_round_to_millis)]
 
 PocketName = Literal[
     "top_left", "top_middle", "top_right", "bottom_left", "bottom_middle", "bottom_right"
 ]
+
+# Absorbs float error so a hit point exactly on the rim of the disc passes.
+_DISC_EPSILON = 1e-9
 
 
 LayoutErrorCode = Literal[
@@ -27,14 +33,9 @@ LayoutErrorCode = Literal[
     "invalid_id",
     "duplicate_id",
     "too_many_object_balls",
-    "duplicate_ball_number",
     "ball_out_of_bounds",
     "balls_overlap",
-    "cue_ball_not_behind_head_string",
-    "unknown_ball_reference",
-    "pocket_target_cue_ball",
     "position_out_of_bounds",
-    "too_many_annotations",
 ]
 
 
@@ -54,92 +55,35 @@ class Table(LayoutModel):
     size_ft: Literal[9]
 
 
-class CueBall(LayoutModel):
+class Ball(LayoutModel):
     id: str
     x: DiamondUnits
     y: DiamondUnits
-    ball_in_hand: Literal["none", "anywhere", "behind_head_string"]
 
 
-class ObjectBall(LayoutModel):
-    id: str
-    number: Annotated[int, Field(ge=1, le=15)] | None = None
-    x: DiamondUnits
-    y: DiamondUnits
+class CueSpin(LayoutModel):
+    """Where the cue tip meets the cue ball: x is side (-1 left to 1 right), y is vertical
+    (-1 bottom to 1 top). The point must lie on or inside the unit disc."""
 
-
-class PocketTarget(LayoutModel):
-    id: str
-    kind: Literal["pocket"]
-    pocket: PocketName
-    # Absent means any ball.
-    ball_id: str | None = None
-
-
-class ZoneTarget(LayoutModel):
-    """A circle (x, y centre, radius) or a rect (x, y top-left corner, width, height)."""
-
-    id: str
-    kind: Literal["zone"]
-    shape: Literal["circle", "rect"]
-    x: DiamondUnits
-    y: DiamondUnits
-    radius: DiamondUnits | None = None
-    width: DiamondUnits | None = None
-    height: DiamondUnits | None = None
-    ball_id: str | None = None
-    label: str | None = None
+    x: SpinOffset
+    y: SpinOffset
 
     @model_validator(mode="after")
-    def _check_shape_fields(self) -> Self:
-        if self.shape == "circle":
-            if self.radius is None or self.radius <= 0:
-                raise ValueError("A circle zone needs a radius greater than 0.")
-            if self.width is not None or self.height is not None:
-                raise ValueError("A circle zone takes a radius, not a width or height.")
-        else:
-            if self.width is None or self.width <= 0 or self.height is None or self.height <= 0:
-                raise ValueError("A rect zone needs a width and height greater than 0.")
-            if self.radius is not None:
-                raise ValueError("A rect zone takes a width and height, not a radius.")
+    def _check_inside_disc(self) -> Self:
+        if self.x * self.x + self.y * self.y > 1 + _DISC_EPSILON:
+            raise ValueError("The spin point must lie inside the cue ball face (x² + y² <= 1).")
         return self
-
-
-class ArrowAnnotation(LayoutModel):
-    id: str
-    kind: Literal["arrow"]
-    points: list[Point] = Field(min_length=2)
-    label: str | None = None
-
-
-class LineAnnotation(LayoutModel):
-    id: str
-    kind: Literal["line"]
-    points: list[Point] = Field(min_length=2)
-    label: str | None = None
-
-
-class TextAnnotation(LayoutModel):
-    id: str
-    kind: Literal["text"]
-    x: DiamondUnits
-    y: DiamondUnits
-    text: str = Field(min_length=1)
-
-
-Target = Annotated[PocketTarget | ZoneTarget, Field(discriminator="kind")]
-Annotation = Annotated[
-    ArrowAnnotation | LineAnnotation | TextAnnotation, Field(discriminator="kind")
-]
 
 
 class DrillLayout(LayoutModel):
     schema_version: int
     table: Table
-    cue_ball: CueBall
-    object_balls: list[ObjectBall] = Field(default_factory=list)
-    targets: list[Target] = Field(default_factory=list)
-    annotations: list[Annotation] = Field(default_factory=list)
+    cue_ball: Ball
+    object_balls: list[Ball] = Field(default_factory=list)
+    # One fixed-size circle centred here; the radius is a constant, not stored (ADR 0008).
+    landing_zone: Point | None = None
+    cue_spin: CueSpin | None = None
+    target_pocket: PocketName | None = None
 
 
 class LayoutError(BaseModel):
