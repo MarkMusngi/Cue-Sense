@@ -11,7 +11,7 @@ export function scoringLabel(scoring: DrillScoring): string {
     case "points":
       return `${scoring.pass_threshold} points per set`;
     case "timed": {
-      const minutes = Math.round((scoring.time_limit_seconds ?? 0) / 60);
+      const minutes = Math.round(scoring.time_limit_seconds / 60);
       return `${scoring.pass_threshold} of ${scoring.attempts_per_set} in ${minutes} min`;
     }
   }
