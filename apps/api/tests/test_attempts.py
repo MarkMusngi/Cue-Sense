@@ -413,3 +413,81 @@ def test_correcting_points_on_a_non_points_drill_is_422(db_session: Session) -> 
 
     assert response.status_code == 422
     assert response.json()["error"]["details"][0]["code"] == "points_not_allowed"
+
+
+# List
+
+
+def test_list_attempts_in_order_with_voided_ones_flagged(db_session: Session) -> None:
+    owner, run, client = setup_run(db_session)
+    make_attempt(db_session, owner, run, 1, outcome="success")
+    make_attempt(db_session, owner, run, 2, outcome="fail", voided_at=datetime.now(UTC))
+    make_attempt(db_session, owner, run, 3, outcome="partial")
+
+    response = client.get(f"/drill-runs/{run.id}/attempts")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["total"] == 3
+    assert [item["attempt_number"] for item in body["items"]] == [1, 2, 3]
+    assert [item["outcome"] for item in body["items"]] == ["success", "fail", "partial"]
+    assert [item["voided_at"] is not None for item in body["items"]] == [False, True, False]
+    # set_progress belongs to the run, not to each attempt in the list.
+    assert "set_progress" not in body["items"][0]
+
+
+def test_list_attempts_carries_points_and_duration(db_session: Session) -> None:
+    _, run, client = setup_run(db_session, POINTS_SCORING)
+    post_attempt(client, run, points=3)
+    post_attempt(client, run, points=1, duration_ms=2500)
+
+    items = client.get(f"/drill-runs/{run.id}/attempts").json()["items"]
+
+    assert [(item["outcome"], item["points"], item["duration_ms"]) for item in items] == [
+        ("success", 3, None),
+        ("partial", 1, 2500),
+    ]
+
+
+def test_list_attempts_is_paginated(db_session: Session) -> None:
+    owner, run, client = setup_run(db_session)
+    for number in range(1, 4):
+        make_attempt(db_session, owner, run, number)
+
+    body = client.get(f"/drill-runs/{run.id}/attempts?limit=2&offset=1").json()
+
+    assert body["total"] == 3
+    assert (body["limit"], body["offset"]) == (2, 1)
+    assert [item["attempt_number"] for item in body["items"]] == [2, 3]
+
+
+def test_list_attempts_of_a_run_with_none_is_empty(db_session: Session) -> None:
+    _, run, client = setup_run(db_session)
+
+    body = client.get(f"/drill-runs/{run.id}/attempts").json()
+
+    assert body == {"items": [], "total": 0, "limit": 20, "offset": 0}
+
+
+def test_another_owners_drill_run_attempts_are_404(db_session: Session) -> None:
+    other, run, _ = setup_run(db_session)
+    make_attempt(db_session, other, run, 1)
+    intruder = make_client(db_session, make_user(db_session))
+
+    response = intruder.get(f"/drill-runs/{run.id}/attempts")
+
+    assert response.status_code == 404
+    assert response.json()["error"]["code"] == "not_found"
+
+
+def test_list_attempts_only_counts_this_runs_attempts(db_session: Session) -> None:
+    owner, run, client = setup_run(db_session)
+    session = db_session.get(PracticeSession, run.practice_session_id)
+    assert session is not None
+    other_run = make_run(db_session, owner, session, make_drill(db_session, owner), 2)
+    make_attempt(db_session, owner, run, 1)
+    make_attempt(db_session, owner, other_run, 1)
+
+    body = client.get(f"/drill-runs/{run.id}/attempts").json()
+
+    assert body["total"] == 1
