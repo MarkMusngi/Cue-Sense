@@ -80,9 +80,13 @@ export function TableEditor({ layout, onChange, readOnly = false }: TableEditorP
   const svgRef = useRef<SVGSVGElement>(null);
   const rootRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<Drag | null>(null);
+  const [isHydrated, setIsHydrated] = useState(false);
   const focusAfterRender = useRef<string | null>(null);
   const helpId = useId();
   const radius = ballRadius();
+
+  // Tests wait for this: server-rendered HTML is visible before the handlers exist.
+  useEffect(() => setIsHydrated(true), []);
 
   // After adding something from the keyboard, move focus to it so the arrow keys and
   // Delete act on it straight away. Runs after every render and does nothing otherwise.
@@ -309,6 +313,7 @@ export function TableEditor({ layout, onChange, readOnly = false }: TableEditorP
       style={{ outline: "none" }}
       className="flex flex-col gap-3"
       data-testid="table-editor"
+      data-hydrated={isHydrated}
       onKeyDown={onRootKeyDown}
     >
       <EditorToolbar
