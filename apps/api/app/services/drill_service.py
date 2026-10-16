@@ -2,6 +2,9 @@
 
 Versions are never updated: a save that changes layout, instructions or scoring inserts
 a new version and moves the drill's current version to it.
+
+Stored layouts may be older schema versions. Every read goes through upgrade_layout
+(ADR 0002), so the API and new versions only ever carry the latest one.
 """
 
 import json
@@ -29,7 +32,7 @@ from app.schemas.drill import (
     DrillVersionRead,
 )
 from app.schemas.tag import TagRead
-from app.services.layout_service import validate_layout
+from app.services.layout_service import upgrade_layout, validate_layout
 from app.services.scoring_service import validate_scoring
 from app.services.tag_service import get_owned_tags
 
@@ -99,7 +102,9 @@ def duplicate_drill(db: Session, owner: User, source_drill_id: uuid.UUID) -> Dri
     )
     db.add(duplicate)
     db.flush()
-    _add_version(db, duplicate, 1, version.instructions, version.layout, version.scoring)
+    _add_version(
+        db, duplicate, 1, version.instructions, upgrade_layout(version.layout), version.scoring
+    )
     _set_tags(db, duplicate, _tag_ids(db, source))
     db.commit()
     return _read_one(db, duplicate)
@@ -147,7 +152,8 @@ def update_drill(db: Session, owner: User, drill_id: uuid.UUID, data: DrillUpdat
     tags = get_owned_tags(db, owner, data.tag_ids)
 
     current = _current_version(db, drill)
-    before = canonical_json([current.instructions, current.layout, current.scoring])
+    # Compare against the upgraded layout, so resaving an old drill unchanged adds nothing.
+    before = canonical_json([current.instructions, upgrade_layout(current.layout), current.scoring])
     if canonical_json([data.instructions, layout, scoring]) != before:
         _add_version(db, drill, current.version_number + 1, data.instructions, layout, scoring)
     drill.title = data.title
@@ -206,7 +212,7 @@ def list_versions(
         .offset(pagination.offset)
     )
     return Page(
-        items=[DrillVersionRead.model_validate(version) for version in versions],
+        items=[_read_version(version) for version in versions],
         total=_count(db, query),
         limit=pagination.limit,
         offset=pagination.offset,
@@ -327,6 +333,18 @@ def _stale_version() -> ConflictError:
     )
 
 
+def _read_version(version: DrillVersion) -> DrillVersionRead:
+    """A stored version as the API shows it, with its layout upgraded to the latest schema."""
+    return DrillVersionRead(
+        id=version.id,
+        version_number=version.version_number,
+        instructions=version.instructions,
+        layout=upgrade_layout(version.layout),
+        scoring=version.scoring,
+        created_at=version.created_at,
+    )
+
+
 def _read_one(db: Session, drill: Drill) -> DrillRead:
     return _read_many(db, [drill])[0]
 
@@ -335,7 +353,7 @@ def _read_many(db: Session, drills: Sequence[Drill]) -> list[DrillRead]:
     """Drills with their current version and tags, in two queries for the whole page."""
     version_ids = [d.current_drill_version_id for d in drills if d.current_drill_version_id]
     versions = {
-        version.id: DrillVersionRead.model_validate(version)
+        version.id: _read_version(version)
         for version in db.scalars(select(DrillVersion).where(DrillVersion.id.in_(version_ids)))
     }
     tags: dict[uuid.UUID, list[TagRead]] = defaultdict(list)

@@ -1,0 +1,1219 @@
+{
+  "description": "Cases for the set progress calculation (docs/architecture.md section 4.4). Input: scoring and attempts in attempt_number order; voided attempts (is_voided true) are ignored. Success rate is compared with a small tolerance.",
+  "cases": [
+    {
+      "name": "success_count: no attempts",
+      "scoring": {
+        "schema_version": 1,
+        "kind": "success_count",
+        "attempts_per_set": 5,
+        "pass_threshold": 3
+      },
+      "attempts": [],
+      "expected": {
+        "set_number": 1,
+        "attempts_in_set": 0,
+        "successes": 0,
+        "points": null,
+        "set_complete": false,
+        "set_passed": null,
+        "success_rate": null,
+        "current_streak": null,
+        "best_streak": null
+      }
+    },
+    {
+      "name": "success_count: set in progress",
+      "scoring": {
+        "schema_version": 1,
+        "kind": "success_count",
+        "attempts_per_set": 5,
+        "pass_threshold": 3
+      },
+      "attempts": [
+        {
+          "outcome": "success",
+          "points": null,
+          "is_voided": false
+        },
+        {
+          "outcome": "fail",
+          "points": null,
+          "is_voided": false
+        },
+        {
+          "outcome": "success",
+          "points": null,
+          "is_voided": false
+        },
+        {
+          "outcome": "fail",
+          "points": null,
+          "is_voided": false
+        }
+      ],
+      "expected": {
+        "set_number": 1,
+        "attempts_in_set": 4,
+        "successes": 2,
+        "points": null,
+        "set_complete": false,
+        "set_passed": null,
+        "success_rate": 0.5,
+        "current_streak": null,
+        "best_streak": null
+      }
+    },
+    {
+      "name": "success_count: partial is not a success",
+      "scoring": {
+        "schema_version": 1,
+        "kind": "success_count",
+        "attempts_per_set": 5,
+        "pass_threshold": 3
+      },
+      "attempts": [
+        {
+          "outcome": "success",
+          "points": null,
+          "is_voided": false
+        },
+        {
+          "outcome": "partial",
+          "points": null,
+          "is_voided": false
+        },
+        {
+          "outcome": "partial",
+          "points": null,
+          "is_voided": false
+        },
+        {
+          "outcome": "success",
+          "points": null,
+          "is_voided": false
+        }
+      ],
+      "expected": {
+        "set_number": 1,
+        "attempts_in_set": 4,
+        "successes": 2,
+        "points": null,
+        "set_complete": false,
+        "set_passed": null,
+        "success_rate": 0.5,
+        "current_streak": null,
+        "best_streak": null
+      }
+    },
+    {
+      "name": "success_count: set boundary, passed",
+      "scoring": {
+        "schema_version": 1,
+        "kind": "success_count",
+        "attempts_per_set": 5,
+        "pass_threshold": 3
+      },
+      "attempts": [
+        {
+          "outcome": "success",
+          "points": null,
+          "is_voided": false
+        },
+        {
+          "outcome": "success",
+          "points": null,
+          "is_voided": false
+        },
+        {
+          "outcome": "success",
+          "points": null,
+          "is_voided": false
+        },
+        {
+          "outcome": "fail",
+          "points": null,
+          "is_voided": false
+        },
+        {
+          "outcome": "fail",
+          "points": null,
+          "is_voided": false
+        }
+      ],
+      "expected": {
+        "set_number": 1,
+        "attempts_in_set": 5,
+        "successes": 3,
+        "points": null,
+        "set_complete": true,
+        "set_passed": true,
+        "success_rate": 0.6,
+        "current_streak": null,
+        "best_streak": null
+      }
+    },
+    {
+      "name": "success_count: set boundary, failed",
+      "scoring": {
+        "schema_version": 1,
+        "kind": "success_count",
+        "attempts_per_set": 5,
+        "pass_threshold": 3
+      },
+      "attempts": [
+        {
+          "outcome": "success",
+          "points": null,
+          "is_voided": false
+        },
+        {
+          "outcome": "fail",
+          "points": null,
+          "is_voided": false
+        },
+        {
+          "outcome": "fail",
+          "points": null,
+          "is_voided": false
+        },
+        {
+          "outcome": "fail",
+          "points": null,
+          "is_voided": false
+        },
+        {
+          "outcome": "fail",
+          "points": null,
+          "is_voided": false
+        }
+      ],
+      "expected": {
+        "set_number": 1,
+        "attempts_in_set": 5,
+        "successes": 1,
+        "points": null,
+        "set_complete": true,
+        "set_passed": false,
+        "success_rate": 0.2,
+        "current_streak": null,
+        "best_streak": null
+      }
+    },
+    {
+      "name": "success_count: first attempt of the next set",
+      "scoring": {
+        "schema_version": 1,
+        "kind": "success_count",
+        "attempts_per_set": 5,
+        "pass_threshold": 3
+      },
+      "attempts": [
+        {
+          "outcome": "success",
+          "points": null,
+          "is_voided": false
+        },
+        {
+          "outcome": "success",
+          "points": null,
+          "is_voided": false
+        },
+        {
+          "outcome": "success",
+          "points": null,
+          "is_voided": false
+        },
+        {
+          "outcome": "fail",
+          "points": null,
+          "is_voided": false
+        },
+        {
+          "outcome": "fail",
+          "points": null,
+          "is_voided": false
+        },
+        {
+          "outcome": "success",
+          "points": null,
+          "is_voided": false
+        }
+      ],
+      "expected": {
+        "set_number": 2,
+        "attempts_in_set": 1,
+        "successes": 1,
+        "points": null,
+        "set_complete": false,
+        "set_passed": null,
+        "success_rate": 0.6666666666666666,
+        "current_streak": null,
+        "best_streak": null
+      }
+    },
+    {
+      "name": "success_count: second set in progress",
+      "scoring": {
+        "schema_version": 1,
+        "kind": "success_count",
+        "attempts_per_set": 5,
+        "pass_threshold": 3
+      },
+      "attempts": [
+        {
+          "outcome": "success",
+          "points": null,
+          "is_voided": false
+        },
+        {
+          "outcome": "success",
+          "points": null,
+          "is_voided": false
+        },
+        {
+          "outcome": "success",
+          "points": null,
+          "is_voided": false
+        },
+        {
+          "outcome": "fail",
+          "points": null,
+          "is_voided": false
+        },
+        {
+          "outcome": "fail",
+          "points": null,
+          "is_voided": false
+        },
+        {
+          "outcome": "success",
+          "points": null,
+          "is_voided": false
+        },
+        {
+          "outcome": "success",
+          "points": null,
+          "is_voided": false
+        },
+        {
+          "outcome": "fail",
+          "points": null,
+          "is_voided": false
+        }
+      ],
+      "expected": {
+        "set_number": 2,
+        "attempts_in_set": 3,
+        "successes": 2,
+        "points": null,
+        "set_complete": false,
+        "set_passed": null,
+        "success_rate": 0.625,
+        "current_streak": null,
+        "best_streak": null
+      }
+    },
+    {
+      "name": "success_count: voided attempt mid-set is ignored",
+      "scoring": {
+        "schema_version": 1,
+        "kind": "success_count",
+        "attempts_per_set": 5,
+        "pass_threshold": 3
+      },
+      "attempts": [
+        {
+          "outcome": "success",
+          "points": null,
+          "is_voided": false
+        },
+        {
+          "outcome": "fail",
+          "points": null,
+          "is_voided": true
+        },
+        {
+          "outcome": "success",
+          "points": null,
+          "is_voided": false
+        },
+        {
+          "outcome": "success",
+          "points": null,
+          "is_voided": false
+        },
+        {
+          "outcome": "fail",
+          "points": null,
+          "is_voided": false
+        },
+        {
+          "outcome": "fail",
+          "points": null,
+          "is_voided": false
+        }
+      ],
+      "expected": {
+        "set_number": 1,
+        "attempts_in_set": 5,
+        "successes": 3,
+        "points": null,
+        "set_complete": true,
+        "set_passed": true,
+        "success_rate": 0.6,
+        "current_streak": null,
+        "best_streak": null
+      }
+    },
+    {
+      "name": "success_count: all attempts voided",
+      "scoring": {
+        "schema_version": 1,
+        "kind": "success_count",
+        "attempts_per_set": 5,
+        "pass_threshold": 3
+      },
+      "attempts": [
+        {
+          "outcome": "success",
+          "points": null,
+          "is_voided": true
+        },
+        {
+          "outcome": "fail",
+          "points": null,
+          "is_voided": true
+        }
+      ],
+      "expected": {
+        "set_number": 1,
+        "attempts_in_set": 0,
+        "successes": 0,
+        "points": null,
+        "set_complete": false,
+        "set_passed": null,
+        "success_rate": null,
+        "current_streak": null,
+        "best_streak": null
+      }
+    },
+    {
+      "name": "success_count: voided attempt after a full set",
+      "scoring": {
+        "schema_version": 1,
+        "kind": "success_count",
+        "attempts_per_set": 5,
+        "pass_threshold": 3
+      },
+      "attempts": [
+        {
+          "outcome": "success",
+          "points": null,
+          "is_voided": false
+        },
+        {
+          "outcome": "success",
+          "points": null,
+          "is_voided": false
+        },
+        {
+          "outcome": "success",
+          "points": null,
+          "is_voided": false
+        },
+        {
+          "outcome": "fail",
+          "points": null,
+          "is_voided": false
+        },
+        {
+          "outcome": "fail",
+          "points": null,
+          "is_voided": false
+        },
+        {
+          "outcome": "success",
+          "points": null,
+          "is_voided": true
+        }
+      ],
+      "expected": {
+        "set_number": 1,
+        "attempts_in_set": 5,
+        "successes": 3,
+        "points": null,
+        "set_complete": true,
+        "set_passed": true,
+        "success_rate": 0.6,
+        "current_streak": null,
+        "best_streak": null
+      }
+    },
+    {
+      "name": "success_count: earlier void shifts the set boundary",
+      "scoring": {
+        "schema_version": 1,
+        "kind": "success_count",
+        "attempts_per_set": 5,
+        "pass_threshold": 3
+      },
+      "attempts": [
+        {
+          "outcome": "fail",
+          "points": null,
+          "is_voided": true
+        },
+        {
+          "outcome": "success",
+          "points": null,
+          "is_voided": false
+        },
+        {
+          "outcome": "success",
+          "points": null,
+          "is_voided": false
+        },
+        {
+          "outcome": "success",
+          "points": null,
+          "is_voided": false
+        },
+        {
+          "outcome": "fail",
+          "points": null,
+          "is_voided": false
+        },
+        {
+          "outcome": "fail",
+          "points": null,
+          "is_voided": false
+        },
+        {
+          "outcome": "success",
+          "points": null,
+          "is_voided": false
+        },
+        {
+          "outcome": "success",
+          "points": null,
+          "is_voided": false
+        },
+        {
+          "outcome": "fail",
+          "points": null,
+          "is_voided": false
+        }
+      ],
+      "expected": {
+        "set_number": 2,
+        "attempts_in_set": 3,
+        "successes": 2,
+        "points": null,
+        "set_complete": false,
+        "set_passed": null,
+        "success_rate": 0.625,
+        "current_streak": null,
+        "best_streak": null
+      }
+    },
+    {
+      "name": "points: no attempts",
+      "scoring": {
+        "schema_version": 1,
+        "kind": "points",
+        "attempts_per_set": 3,
+        "max_points_per_attempt": 3,
+        "pass_threshold": 6
+      },
+      "attempts": [],
+      "expected": {
+        "set_number": 1,
+        "attempts_in_set": 0,
+        "successes": 0,
+        "points": 0,
+        "set_complete": false,
+        "set_passed": null,
+        "success_rate": null,
+        "current_streak": null,
+        "best_streak": null
+      }
+    },
+    {
+      "name": "points: set in progress",
+      "scoring": {
+        "schema_version": 1,
+        "kind": "points",
+        "attempts_per_set": 3,
+        "max_points_per_attempt": 3,
+        "pass_threshold": 6
+      },
+      "attempts": [
+        {
+          "outcome": "success",
+          "points": 3,
+          "is_voided": false
+        },
+        {
+          "outcome": "partial",
+          "points": 2,
+          "is_voided": false
+        }
+      ],
+      "expected": {
+        "set_number": 1,
+        "attempts_in_set": 2,
+        "successes": 1,
+        "points": 5,
+        "set_complete": false,
+        "set_passed": null,
+        "success_rate": 0.5,
+        "current_streak": null,
+        "best_streak": null
+      }
+    },
+    {
+      "name": "points: set boundary, passed",
+      "scoring": {
+        "schema_version": 1,
+        "kind": "points",
+        "attempts_per_set": 3,
+        "max_points_per_attempt": 3,
+        "pass_threshold": 6
+      },
+      "attempts": [
+        {
+          "outcome": "success",
+          "points": 3,
+          "is_voided": false
+        },
+        {
+          "outcome": "success",
+          "points": 3,
+          "is_voided": false
+        },
+        {
+          "outcome": "fail",
+          "points": 0,
+          "is_voided": false
+        }
+      ],
+      "expected": {
+        "set_number": 1,
+        "attempts_in_set": 3,
+        "successes": 2,
+        "points": 6,
+        "set_complete": true,
+        "set_passed": true,
+        "success_rate": 0.6666666666666666,
+        "current_streak": null,
+        "best_streak": null
+      }
+    },
+    {
+      "name": "points: set boundary, failed with partials",
+      "scoring": {
+        "schema_version": 1,
+        "kind": "points",
+        "attempts_per_set": 3,
+        "max_points_per_attempt": 3,
+        "pass_threshold": 6
+      },
+      "attempts": [
+        {
+          "outcome": "partial",
+          "points": 1,
+          "is_voided": false
+        },
+        {
+          "outcome": "partial",
+          "points": 1,
+          "is_voided": false
+        },
+        {
+          "outcome": "partial",
+          "points": 1,
+          "is_voided": false
+        }
+      ],
+      "expected": {
+        "set_number": 1,
+        "attempts_in_set": 3,
+        "successes": 0,
+        "points": 3,
+        "set_complete": true,
+        "set_passed": false,
+        "success_rate": 0.0,
+        "current_streak": null,
+        "best_streak": null
+      }
+    },
+    {
+      "name": "points: first attempt of the next set",
+      "scoring": {
+        "schema_version": 1,
+        "kind": "points",
+        "attempts_per_set": 3,
+        "max_points_per_attempt": 3,
+        "pass_threshold": 6
+      },
+      "attempts": [
+        {
+          "outcome": "success",
+          "points": 3,
+          "is_voided": false
+        },
+        {
+          "outcome": "success",
+          "points": 3,
+          "is_voided": false
+        },
+        {
+          "outcome": "fail",
+          "points": 0,
+          "is_voided": false
+        },
+        {
+          "outcome": "partial",
+          "points": 2,
+          "is_voided": false
+        }
+      ],
+      "expected": {
+        "set_number": 2,
+        "attempts_in_set": 1,
+        "successes": 0,
+        "points": 2,
+        "set_complete": false,
+        "set_passed": null,
+        "success_rate": 0.5,
+        "current_streak": null,
+        "best_streak": null
+      }
+    },
+    {
+      "name": "points: voided attempt mid-set is ignored",
+      "scoring": {
+        "schema_version": 1,
+        "kind": "points",
+        "attempts_per_set": 3,
+        "max_points_per_attempt": 3,
+        "pass_threshold": 6
+      },
+      "attempts": [
+        {
+          "outcome": "success",
+          "points": 3,
+          "is_voided": false
+        },
+        {
+          "outcome": "fail",
+          "points": 0,
+          "is_voided": true
+        },
+        {
+          "outcome": "success",
+          "points": 3,
+          "is_voided": false
+        },
+        {
+          "outcome": "partial",
+          "points": 1,
+          "is_voided": false
+        }
+      ],
+      "expected": {
+        "set_number": 1,
+        "attempts_in_set": 3,
+        "successes": 2,
+        "points": 7,
+        "set_complete": true,
+        "set_passed": true,
+        "success_rate": 0.6666666666666666,
+        "current_streak": null,
+        "best_streak": null
+      }
+    },
+    {
+      "name": "timed: no attempts",
+      "scoring": {
+        "schema_version": 1,
+        "kind": "timed",
+        "attempts_per_set": 3,
+        "time_limit_seconds": 90,
+        "pass_threshold": 2
+      },
+      "attempts": [],
+      "expected": {
+        "set_number": 1,
+        "attempts_in_set": 0,
+        "successes": 0,
+        "points": null,
+        "set_complete": false,
+        "set_passed": null,
+        "success_rate": null,
+        "current_streak": null,
+        "best_streak": null
+      }
+    },
+    {
+      "name": "timed: set boundary, passed",
+      "scoring": {
+        "schema_version": 1,
+        "kind": "timed",
+        "attempts_per_set": 3,
+        "time_limit_seconds": 90,
+        "pass_threshold": 2
+      },
+      "attempts": [
+        {
+          "outcome": "success",
+          "points": null,
+          "is_voided": false
+        },
+        {
+          "outcome": "fail",
+          "points": null,
+          "is_voided": false
+        },
+        {
+          "outcome": "success",
+          "points": null,
+          "is_voided": false
+        }
+      ],
+      "expected": {
+        "set_number": 1,
+        "attempts_in_set": 3,
+        "successes": 2,
+        "points": null,
+        "set_complete": true,
+        "set_passed": true,
+        "success_rate": 0.6666666666666666,
+        "current_streak": null,
+        "best_streak": null
+      }
+    },
+    {
+      "name": "timed: set boundary, failed",
+      "scoring": {
+        "schema_version": 1,
+        "kind": "timed",
+        "attempts_per_set": 3,
+        "time_limit_seconds": 90,
+        "pass_threshold": 2
+      },
+      "attempts": [
+        {
+          "outcome": "fail",
+          "points": null,
+          "is_voided": false
+        },
+        {
+          "outcome": "fail",
+          "points": null,
+          "is_voided": false
+        },
+        {
+          "outcome": "success",
+          "points": null,
+          "is_voided": false
+        }
+      ],
+      "expected": {
+        "set_number": 1,
+        "attempts_in_set": 3,
+        "successes": 1,
+        "points": null,
+        "set_complete": true,
+        "set_passed": false,
+        "success_rate": 0.3333333333333333,
+        "current_streak": null,
+        "best_streak": null
+      }
+    },
+    {
+      "name": "timed: first attempt of the next set",
+      "scoring": {
+        "schema_version": 1,
+        "kind": "timed",
+        "attempts_per_set": 3,
+        "time_limit_seconds": 90,
+        "pass_threshold": 2
+      },
+      "attempts": [
+        {
+          "outcome": "success",
+          "points": null,
+          "is_voided": false
+        },
+        {
+          "outcome": "success",
+          "points": null,
+          "is_voided": false
+        },
+        {
+          "outcome": "success",
+          "points": null,
+          "is_voided": false
+        },
+        {
+          "outcome": "fail",
+          "points": null,
+          "is_voided": false
+        }
+      ],
+      "expected": {
+        "set_number": 2,
+        "attempts_in_set": 1,
+        "successes": 0,
+        "points": null,
+        "set_complete": false,
+        "set_passed": null,
+        "success_rate": 0.75,
+        "current_streak": null,
+        "best_streak": null
+      }
+    },
+    {
+      "name": "timed: voided attempt mid-set is ignored",
+      "scoring": {
+        "schema_version": 1,
+        "kind": "timed",
+        "attempts_per_set": 3,
+        "time_limit_seconds": 90,
+        "pass_threshold": 2
+      },
+      "attempts": [
+        {
+          "outcome": "success",
+          "points": null,
+          "is_voided": false
+        },
+        {
+          "outcome": "success",
+          "points": null,
+          "is_voided": true
+        },
+        {
+          "outcome": "fail",
+          "points": null,
+          "is_voided": false
+        },
+        {
+          "outcome": "success",
+          "points": null,
+          "is_voided": false
+        }
+      ],
+      "expected": {
+        "set_number": 1,
+        "attempts_in_set": 3,
+        "successes": 2,
+        "points": null,
+        "set_complete": true,
+        "set_passed": true,
+        "success_rate": 0.6666666666666666,
+        "current_streak": null,
+        "best_streak": null
+      }
+    },
+    {
+      "name": "streak: no attempts",
+      "scoring": {
+        "schema_version": 1,
+        "kind": "streak",
+        "streak_length": 3
+      },
+      "attempts": [],
+      "expected": {
+        "set_number": 1,
+        "attempts_in_set": 0,
+        "successes": 0,
+        "points": null,
+        "set_complete": false,
+        "set_passed": null,
+        "success_rate": null,
+        "current_streak": 0,
+        "best_streak": 0
+      }
+    },
+    {
+      "name": "streak: streak building",
+      "scoring": {
+        "schema_version": 1,
+        "kind": "streak",
+        "streak_length": 3
+      },
+      "attempts": [
+        {
+          "outcome": "success",
+          "points": null,
+          "is_voided": false
+        },
+        {
+          "outcome": "success",
+          "points": null,
+          "is_voided": false
+        }
+      ],
+      "expected": {
+        "set_number": 1,
+        "attempts_in_set": 2,
+        "successes": 2,
+        "points": null,
+        "set_complete": false,
+        "set_passed": null,
+        "success_rate": 1.0,
+        "current_streak": 2,
+        "best_streak": 2
+      }
+    },
+    {
+      "name": "streak: a fail resets the current streak",
+      "scoring": {
+        "schema_version": 1,
+        "kind": "streak",
+        "streak_length": 3
+      },
+      "attempts": [
+        {
+          "outcome": "success",
+          "points": null,
+          "is_voided": false
+        },
+        {
+          "outcome": "success",
+          "points": null,
+          "is_voided": false
+        },
+        {
+          "outcome": "fail",
+          "points": null,
+          "is_voided": false
+        },
+        {
+          "outcome": "success",
+          "points": null,
+          "is_voided": false
+        }
+      ],
+      "expected": {
+        "set_number": 1,
+        "attempts_in_set": 4,
+        "successes": 3,
+        "points": null,
+        "set_complete": false,
+        "set_passed": null,
+        "success_rate": 0.75,
+        "current_streak": 1,
+        "best_streak": 2
+      }
+    },
+    {
+      "name": "streak: a partial breaks the streak",
+      "scoring": {
+        "schema_version": 1,
+        "kind": "streak",
+        "streak_length": 3
+      },
+      "attempts": [
+        {
+          "outcome": "success",
+          "points": null,
+          "is_voided": false
+        },
+        {
+          "outcome": "success",
+          "points": null,
+          "is_voided": false
+        },
+        {
+          "outcome": "partial",
+          "points": null,
+          "is_voided": false
+        },
+        {
+          "outcome": "success",
+          "points": null,
+          "is_voided": false
+        }
+      ],
+      "expected": {
+        "set_number": 1,
+        "attempts_in_set": 4,
+        "successes": 3,
+        "points": null,
+        "set_complete": false,
+        "set_passed": null,
+        "success_rate": 0.75,
+        "current_streak": 1,
+        "best_streak": 2
+      }
+    },
+    {
+      "name": "streak: target reached",
+      "scoring": {
+        "schema_version": 1,
+        "kind": "streak",
+        "streak_length": 3
+      },
+      "attempts": [
+        {
+          "outcome": "success",
+          "points": null,
+          "is_voided": false
+        },
+        {
+          "outcome": "success",
+          "points": null,
+          "is_voided": false
+        },
+        {
+          "outcome": "success",
+          "points": null,
+          "is_voided": false
+        }
+      ],
+      "expected": {
+        "set_number": 1,
+        "attempts_in_set": 3,
+        "successes": 3,
+        "points": null,
+        "set_complete": true,
+        "set_passed": true,
+        "success_rate": 1.0,
+        "current_streak": 3,
+        "best_streak": 3
+      }
+    },
+    {
+      "name": "streak: target stays reached after a fail",
+      "scoring": {
+        "schema_version": 1,
+        "kind": "streak",
+        "streak_length": 3
+      },
+      "attempts": [
+        {
+          "outcome": "success",
+          "points": null,
+          "is_voided": false
+        },
+        {
+          "outcome": "success",
+          "points": null,
+          "is_voided": false
+        },
+        {
+          "outcome": "success",
+          "points": null,
+          "is_voided": false
+        },
+        {
+          "outcome": "fail",
+          "points": null,
+          "is_voided": false
+        }
+      ],
+      "expected": {
+        "set_number": 1,
+        "attempts_in_set": 4,
+        "successes": 3,
+        "points": null,
+        "set_complete": true,
+        "set_passed": true,
+        "success_rate": 0.75,
+        "current_streak": 0,
+        "best_streak": 3
+      }
+    },
+    {
+      "name": "streak: voided fail does not break the streak",
+      "scoring": {
+        "schema_version": 1,
+        "kind": "streak",
+        "streak_length": 3
+      },
+      "attempts": [
+        {
+          "outcome": "success",
+          "points": null,
+          "is_voided": false
+        },
+        {
+          "outcome": "success",
+          "points": null,
+          "is_voided": false
+        },
+        {
+          "outcome": "fail",
+          "points": null,
+          "is_voided": true
+        },
+        {
+          "outcome": "success",
+          "points": null,
+          "is_voided": false
+        }
+      ],
+      "expected": {
+        "set_number": 1,
+        "attempts_in_set": 3,
+        "successes": 3,
+        "points": null,
+        "set_complete": true,
+        "set_passed": true,
+        "success_rate": 1.0,
+        "current_streak": 3,
+        "best_streak": 3
+      }
+    },
+    {
+      "name": "streak: voided success does not extend the streak",
+      "scoring": {
+        "schema_version": 1,
+        "kind": "streak",
+        "streak_length": 3
+      },
+      "attempts": [
+        {
+          "outcome": "success",
+          "points": null,
+          "is_voided": false
+        },
+        {
+          "outcome": "success",
+          "points": null,
+          "is_voided": false
+        },
+        {
+          "outcome": "success",
+          "points": null,
+          "is_voided": true
+        },
+        {
+          "outcome": "fail",
+          "points": null,
+          "is_voided": false
+        },
+        {
+          "outcome": "success",
+          "points": null,
+          "is_voided": false
+        }
+      ],
+      "expected": {
+        "set_number": 1,
+        "attempts_in_set": 4,
+        "successes": 3,
+        "points": null,
+        "set_complete": false,
+        "set_passed": null,
+        "success_rate": 0.75,
+        "current_streak": 1,
+        "best_streak": 2
+      }
+    }
+  ]
+}

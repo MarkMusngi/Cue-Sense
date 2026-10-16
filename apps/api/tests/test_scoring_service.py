@@ -1,8 +1,11 @@
+import json
+from pathlib import Path
 from typing import Any
 
 import pytest
 
-from app.services.scoring_service import validate_scoring
+from app.schemas.scoring import ScoredAttempt
+from app.services.scoring_service import compute_set_progress, validate_scoring
 
 VALID: list[dict[str, Any]] = [
     {"schema_version": 1, "kind": "success_count", "attempts_per_set": 10, "pass_threshold": 7},
@@ -81,3 +84,37 @@ def test_pass_threshold_equal_to_the_maximum_passes() -> None:
 
 def test_non_object_scoring_is_a_schema_error() -> None:
     assert [code for code, _ in pairs("make 7 of 10")] == ["schema_invalid"]
+
+
+def _fixture_path() -> Path:
+    """The shared fixture lives at the repo root; Docker mounts it at /fixtures."""
+    for root in (*Path(__file__).resolve().parents, Path("/")):
+        candidate = root / "fixtures" / "scoring" / "set-progress-cases.json"
+        if candidate.exists():
+            return candidate
+    pytest.fail("fixtures/scoring/set-progress-cases.json not found.")
+
+
+SET_PROGRESS_CASES: list[dict[str, Any]] = json.loads(_fixture_path().read_text())["cases"]
+
+
+@pytest.mark.parametrize("case", SET_PROGRESS_CASES, ids=[c["name"] for c in SET_PROGRESS_CASES])
+def test_set_progress_matches_shared_fixture(case: dict[str, Any]) -> None:
+    scoring = validate_scoring(case["scoring"]).require_scoring()
+    attempts = [ScoredAttempt(**attempt) for attempt in case["attempts"]]
+
+    progress = compute_set_progress(scoring, attempts).model_dump()
+
+    expected = case["expected"]
+    assert set(progress) == set(expected)
+    for key, value in expected.items():
+        if key == "success_rate" and value is not None:
+            assert progress[key] == pytest.approx(value)
+        else:
+            assert progress[key] == value, key
+
+
+def test_fixture_covers_all_four_scoring_kinds() -> None:
+    kinds = {case["scoring"]["kind"] for case in SET_PROGRESS_CASES}
+
+    assert kinds == {"success_count", "streak", "points", "timed"}
