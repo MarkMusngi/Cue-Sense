@@ -65,6 +65,12 @@ describe("TableEditor", () => {
     );
   });
 
+  it("marks itself hydrated once its handlers exist, for the e2e specs to wait on", () => {
+    render(<TableEditor layout={START} onChange={() => {}} />);
+
+    expect(screen.getByTestId("table-editor")).toHaveAttribute("data-hydrated", "true");
+  });
+
   it("draws a read-only table with no toolbar and nothing focusable", () => {
     const { container } = render(
       <TableEditor layout={{ ...START, target_pocket: "top_right" }} readOnly />,
