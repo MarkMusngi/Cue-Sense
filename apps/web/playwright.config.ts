@@ -7,7 +7,10 @@ const isCi = Boolean(process.env.CI);
 
 export default defineConfig({
   testDir: "./e2e",
-  fullyParallel: true,
+  // Specs share one database and one seeded user (one open practice session at a
+  // time), so run them one after another until specs get isolated data.
+  fullyParallel: false,
+  workers: 1,
   forbidOnly: isCi,
   retries: isCi ? 1 : 0,
   reporter: [["list"], ["html", { open: "never" }]],
