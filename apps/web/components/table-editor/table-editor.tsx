@@ -248,7 +248,9 @@ export function TableEditor({ layout, onChange, readOnly = false }: TableEditorP
     },
     onBallKeyDown: (event, id) => onElementKeyDown(event, id),
     onZonePointerDown(event) {
-      if (tool === "zone" || tool === "pocket") return;
+      // Only the Select tool grabs the zone; other tools act on the table beneath it,
+      // so a ball can be placed inside the zone.
+      if (tool !== "select") return;
       event.stopPropagation();
       setSelected(LANDING_ZONE_ID);
       startDrag(event, LANDING_ZONE_ID);

@@ -289,6 +289,33 @@ describe("TableEditor", () => {
     expect(lastLayout(onChange).object_balls[0]).toEqual({ id: "ball_1", x: 6, y: 1.25 });
   });
 
+  it("places a ball inside the landing zone with the Ball tool, but selects the zone with Select", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(<Harness initial={{ ...START, landing_zone: { x: 4, y: 2 } }} onChange={onChange} />);
+    const svg = screen.getByTestId("table-editor-svg");
+    svg.getBoundingClientRect = () =>
+      ({ left: 0, top: 0, width: 890, height: 490, right: 890, bottom: 490 }) as DOMRect;
+    const zone = screen.getByTestId("table-editor-landing-zone");
+
+    // Select tool: pressing on the zone selects it and adds nothing.
+    act(() => {
+      fireEvent.pointerDown(zone, { clientX: 475, clientY: 245, pointerId: 1 });
+      fireEvent.pointerUp(svg, { clientX: 475, clientY: 245, pointerId: 1 });
+    });
+    expect(screen.getByTestId("table-editor-selection")).toHaveTextContent("Landing zone");
+    expect(onChange).not.toHaveBeenCalled();
+
+    // Ball tool: the same press places a ball, at (4.3, 2.0) after snapping.
+    await user.click(screen.getByTestId("table-editor-tool-ball"));
+    act(() => {
+      fireEvent.pointerDown(zone, { clientX: 475, clientY: 245, pointerId: 2 });
+    });
+    const balls = lastLayout(onChange).object_balls;
+    expect(balls).toHaveLength(2);
+    expect(balls[1]).toEqual({ id: "ball_2", x: 4.3, y: 2 });
+  });
+
   it("does not let a dragged ball overlap another", () => {
     const onChange = vi.fn();
     render(
