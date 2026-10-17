@@ -273,7 +273,7 @@ GET    /drill-runs/{id}/attempts            the run's attempts in attempt_number
                                             included (voided_at says which), without set progress
 ```
 
-The `/stats` endpoints are planned in [stats-contract.md](stats-contract.md).
+The `/stats` endpoints (success rate per drill, weekly volume, per-tag breakdown) are in [stats-contract.md](stats-contract.md).
 
 Rules:
 - Pagination on every list: `limit` (default 20, at most 100) and `offset` query parameters. Lists return `{"items": [...], "total", "limit", "offset"}`.

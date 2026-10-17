@@ -404,3 +404,76 @@ export function signOut(): Promise<ApiResult<undefined>> {
 export function getMe(): Promise<ApiResult<UserRead>> {
   return getJson<UserRead>("/users/me");
 }
+
+// Stats for the progress screen (docs/stats-contract.md). The date range keys are "from" and
+// "to" in the JSON.
+
+export type SuccessRatePoint = {
+  bucket_start: string;
+  attempts: number;
+  successes: number;
+  success_rate: number;
+  drill_run_count: number;
+  drill_version_numbers: number[];
+};
+
+export type SuccessRateVersion = {
+  drill_version_id: string;
+  version_number: number;
+  scoring_kind: ScoringKind;
+  first_attempt_at: string;
+  scoring_kind_changed: boolean;
+};
+
+export type SuccessRateStats = {
+  drill_id: string;
+  bucket: "day" | "week";
+  from: string;
+  to: string;
+  points: SuccessRatePoint[];
+  versions: SuccessRateVersion[];
+};
+
+export type WeeklyVolumeItem = {
+  week_start: string;
+  practice_sessions: number;
+  drill_runs: number;
+  attempts: number;
+};
+export type WeeklyVolumeStats = { from: string; to: string; items: WeeklyVolumeItem[] };
+
+export type TagStatsItem = {
+  tag_id: string;
+  name: string;
+  category: string;
+  drill_count: number;
+  drill_run_count: number;
+  attempts: number;
+  successes: number;
+  success_rate: number;
+};
+export type TagStats = { from: string; to: string; items: TagStatsItem[] };
+
+export type StatsRange = { from: string; to: string };
+
+function statsQuery(range: StatsRange, extra: Record<string, string> = {}): string {
+  return new URLSearchParams({ from: range.from, to: range.to, ...extra }).toString();
+}
+
+export function getDrillSuccessRate(
+  drillId: string,
+  range: StatsRange,
+  bucket: "day" | "week",
+): Promise<ApiResult<SuccessRateStats>> {
+  return getJson<SuccessRateStats>(
+    `/stats/drills/${encodeURIComponent(drillId)}/success-rate?${statsQuery(range, { bucket })}`,
+  );
+}
+
+export function getWeeklyVolume(range: StatsRange): Promise<ApiResult<WeeklyVolumeStats>> {
+  return getJson<WeeklyVolumeStats>(`/stats/weekly-volume?${statsQuery(range)}`);
+}
+
+export function getTagStats(range: StatsRange): Promise<ApiResult<TagStats>> {
+  return getJson<TagStats>(`/stats/tags?${statsQuery(range)}`);
+}

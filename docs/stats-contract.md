@@ -1,8 +1,8 @@
 # Stats contract
 
-Planned `/stats` endpoints for the Phase 3 dashboard (docs/architecture.md section 4.7, screen 6). This is a contract only: **no endpoint is implemented yet.** The dashboard ticket implements it, and changes to the shapes below need a note in that ticket.
+Planned `/stats` endpoints for the Phase 3 dashboard (docs/architecture.md section 4.7, screen 6). The three endpoints are implemented (CUE-37, `apps/api/app/services/stats_service.py`, `docs/progress-dashboard.md`). Changes to the shapes below need a note in a ticket.
 
-Choosing a chart library is out of scope here.
+Choosing a chart library is out of scope here. The weekly volume response is zero-filled by the service after the grouped SQL queries run, not with `generate_series`.
 
 ## Rules for every stats endpoint
 
