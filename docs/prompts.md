@@ -20,7 +20,7 @@ Last checked against `main` at the merge of the Playwright harness (CUE-19), plu
 | 7 Drill editor and detail screens | Done | Library (CUE-15), editor and detail (CUE-26, `docs/drill-editor.md`) |
 | 8 Session runner and history | Done | API (CUE-14); runner, hub and history screens plus an attempts list endpoint (CUE-31, `docs/session-runner.md`) |
 | 9 End-to-end tests | Done | Journeys in `apps/web/e2e` (CUE-34): see the prompt below for which spec covers each |
-| 10 Dashboard and `/stats` | Todo | Contract written in `docs/stats-contract.md` |
+| 10 Dashboard and `/stats` | Done | CUE-37: endpoints per `docs/stats-contract.md`, Progress screen (`docs/progress-dashboard.md`). Goals and streaks are not built |
 | 11 Authentication | Done | Cookie sessions and argon2 passwords (CUE-35, `docs/authentication.md`) |
 
 Other work already on `main`: the Night hall design system and app shell (CUE-13, `docs/design-system.md`) and the seeded starter drills.
