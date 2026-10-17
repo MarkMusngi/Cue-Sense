@@ -7,8 +7,8 @@ import { TagTable } from "@/components/progress/tag-table";
 import { VolumeBars } from "@/components/progress/volume-bars";
 import { PageHeader } from "@/components/page/page-header";
 import {
+  getAllDrills,
   getDrillSuccessRate,
-  getDrills,
   getTagStats,
   getWeeklyVolume,
   type ApiResult,
@@ -68,12 +68,12 @@ export default async function ProgressPage({
   const range = rangeDates(params.range, new Date());
 
   const [drills, volume, tags] = await Promise.all([
-    getDrills({}),
+    getAllDrills(),
     getWeeklyVolume(range),
     getTagStats(range),
   ]);
 
-  const options = drills.ok ? drills.data.items.map((d) => ({ id: d.id, title: d.title })) : [];
+  const options = drills.ok ? drills.data.map((d) => ({ id: d.id, title: d.title })) : [];
   const selected = options.find((d) => d.id === params.drill) ?? options[0];
   const success = selected
     ? await getDrillSuccessRate(selected.id, range, bucketFor(params.range))

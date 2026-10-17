@@ -7,7 +7,7 @@ import { LocalTime } from "@/components/sessions/local-time";
 import { FinishSessionButton } from "@/components/sessions/session-buttons";
 import { ErrorCard } from "@/components/state-cards";
 import { buttonClasses } from "@/components/ui/button-styles";
-import { getAttempts, getDrills, getSession } from "@/lib/api-client";
+import { getAllDrills, getAttempts, getSession } from "@/lib/api-client";
 import { scoringLabel } from "@/lib/scoring-text";
 import { sessionDuration, totalsOf } from "@/lib/session-summary";
 
@@ -18,7 +18,7 @@ export const dynamic = "force-dynamic";
 
 export default async function SessionPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const [session, drills] = await Promise.all([getSession(id), getDrills()]);
+  const [session, drills] = await Promise.all([getSession(id), getAllDrills()]);
 
   if (!session.ok) {
     if (session.code === "not_found" || session.code === "validation_failed") notFound();
@@ -31,7 +31,7 @@ export default async function SessionPage({ params }: { params: Promise<{ id: st
 
   const data = session.data;
   const isOpen = data.ended_at === null;
-  const drillList = drills.ok ? drills.data.items : [];
+  const drillList = drills.ok ? drills.data : [];
   const titles = new Map(drillList.map((drill) => [drill.id, drill]));
   // Each run's attempts give its totals; a session has few runs, so fetch them together.
   const attempts = await Promise.all(data.drill_runs.map((run) => getAttempts(run.id)));
