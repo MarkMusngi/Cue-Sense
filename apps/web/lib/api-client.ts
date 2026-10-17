@@ -190,12 +190,28 @@ function getJson<T>(path: string): Promise<ApiResult<T>> {
   return request<T>("GET", path);
 }
 
-export function getDrills(filters: DrillFilters = {}): Promise<ApiResult<Page<DrillRead>>> {
-  const params = new URLSearchParams({ limit: "100" });
+export function getDrills(
+  filters: DrillFilters = {},
+  offset = 0,
+): Promise<ApiResult<Page<DrillRead>>> {
+  const params = new URLSearchParams({ limit: "100", offset: String(offset) });
   for (const [key, value] of Object.entries(filters)) {
     if (value !== undefined && value !== "") params.set(key, String(value));
   }
   return getJson<Page<DrillRead>>(`/drills?${params.toString()}`);
+}
+
+/** Every drill that matches, fetched a page at a time, for a picker that must offer them all. */
+export async function getAllDrills(filters: DrillFilters = {}): Promise<ApiResult<DrillRead[]>> {
+  const all: DrillRead[] = [];
+  // A bound (5,000 drills), so a misbehaving API cannot keep this loop going.
+  for (let page = 0; page < 50; page++) {
+    const result = await getDrills(filters, page * 100);
+    if (!result.ok) return result;
+    all.push(...result.data.items);
+    if (all.length >= result.data.total || result.data.items.length === 0) break;
+  }
+  return { ok: true, data: all };
 }
 
 export function getTags(): Promise<ApiResult<Page<TagRead>>> {
