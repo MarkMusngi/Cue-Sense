@@ -262,6 +262,8 @@ PATCH  /drill-runs/{id}                     end a drill run (ended_at), notes
 POST   /drill-runs/{id}/attempts            log one attempt (Idempotency-Key header required)
 PATCH  /attempts/{id}                       correct an attempt, or undo it (voided_at)
 GET    /drill-runs/{id}                     drill run detail, with set progress
+GET    /drill-runs/{id}/attempts            the run's attempts in attempt_number order, voided ones
+                                            included (voided_at says which), without set progress
 ```
 
 The `/stats` endpoints are planned in [stats-contract.md](stats-contract.md).

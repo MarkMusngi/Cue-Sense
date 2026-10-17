@@ -38,6 +38,23 @@ class AttemptUpdate(BaseModel):
     notes: Notes | None = None
 
 
+class AttemptSummary(BaseModel):
+    """An attempt in a drill run's list. No set_progress: that belongs to the run, and
+    computing it once per attempt would repeat the same work."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    attempt_number: int
+    outcome: Outcome
+    points: int | None
+    duration_ms: int | None
+    tapped_at: AwareDatetime
+    recorded_at: AwareDatetime
+    voided_at: AwareDatetime | None
+    notes: str | None
+
+
 class AttemptRead(BaseModel):
     id: uuid.UUID
     drill_run_id: uuid.UUID

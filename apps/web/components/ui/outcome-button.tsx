@@ -4,8 +4,11 @@ import type { ButtonHTMLAttributes } from "react";
 
 import { cx } from "@/lib/cx";
 
+import type { Outcome } from "@/lib/api-client";
+
+export type { Outcome };
+
 // Attempt outcomes use the API's values; the labels are what a player says at the table.
-export type Outcome = "success" | "fail" | "partial";
 
 type OutcomeButtonProps = Omit<ButtonHTMLAttributes<HTMLButtonElement>, "children"> & {
   outcome: Outcome;

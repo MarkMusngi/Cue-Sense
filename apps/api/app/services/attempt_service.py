@@ -14,7 +14,8 @@ from sqlalchemy.orm import Session
 from app.core.errors import ConflictError, ErrorDetail, NotFoundError, ValidationFailedError
 from app.db.session import violated_constraint
 from app.models import Attempt, DrillRun, DrillVersion, User
-from app.schemas.attempt import AttemptCreate, AttemptRead, AttemptUpdate, Outcome
+from app.schemas.attempt import AttemptCreate, AttemptRead, AttemptSummary, AttemptUpdate, Outcome
+from app.schemas.common import Page, Pagination
 from app.schemas.scoring import PointsScoring, Scoring, TimedScoring
 from app.services import session_service
 from app.services.scoring_service import parse_scoring
@@ -74,6 +75,25 @@ def create_attempt(
             raise _key_conflict() from exc
         raise
     return _read(db, run, attempt), True
+
+
+def list_attempts(
+    db: Session, owner: User, run_id: uuid.UUID, pagination: Pagination
+) -> Page[AttemptSummary]:
+    """A drill run's attempts in attempt_number order, voided ones included (voided_at says
+    which), so a client can redraw a run and undo after a reload."""
+    run = session_service.get_owned_drill_run(db, owner, run_id)
+    query = select(Attempt).where(Attempt.drill_run_id == run.id, Attempt.owner_id == owner.id)
+    total = db.scalar(select(func.count()).select_from(query.subquery())) or 0
+    attempts = db.scalars(
+        query.order_by(Attempt.attempt_number).limit(pagination.limit).offset(pagination.offset)
+    ).all()
+    return Page(
+        items=[AttemptSummary.model_validate(attempt) for attempt in attempts],
+        total=total,
+        limit=pagination.limit,
+        offset=pagination.offset,
+    )
 
 
 def update_attempt(
