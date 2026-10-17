@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 
+import { buttonClasses } from "@/components/ui/button-styles";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { cx } from "@/lib/cx";
 import { NAV_ITEMS, isActive } from "@/lib/nav";
@@ -42,11 +43,38 @@ function Brand() {
   );
 }
 
+function SignOutButton({
+  action,
+  testId,
+  className,
+}: {
+  action: () => Promise<void>;
+  testId: string;
+  className?: string;
+}) {
+  return (
+    <form action={action}>
+      <button type="submit" data-testid={testId} className={buttonClasses("ghost", className)}>
+        Sign out
+      </button>
+    </form>
+  );
+}
+
 /**
  * The frame around every app page: a sidebar on desktop and a bottom tab bar on
  * phones. Both carry the same links so each layout is complete on its own.
  */
-export function AppShell({ children }: { children: ReactNode }) {
+export function AppShell({
+  children,
+  userEmail,
+  signOutAction,
+}: {
+  children: ReactNode;
+  /** Who is signed in; null when the API could not say. */
+  userEmail: string | null;
+  signOutAction: () => Promise<void>;
+}) {
   const pathname = usePathname() ?? "/";
 
   return (
@@ -83,17 +111,23 @@ export function AppShell({ children }: { children: ReactNode }) {
         </nav>
         <div className="mt-auto flex items-center justify-between gap-2 border-t border-line pt-4">
           <div className="min-w-0">
-            <p className="text-[13px] font-medium">Dev user</p>
-            <p className="truncate font-mono text-xs text-muted">dev@cuesense.local</p>
+            <p className="text-[13px] font-medium">Signed in</p>
+            <p data-testid="sidebar-user-email" className="truncate font-mono text-xs text-muted">
+              {userEmail ?? "Unknown"}
+            </p>
           </div>
           <ThemeToggle data-testid="sidebar-theme-toggle" />
         </div>
+        <SignOutButton action={signOutAction} testId="sidebar-sign-out" className="w-full" />
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="flex items-center justify-between border-b border-line bg-surface px-4 py-2 md:hidden">
           <Brand />
-          <ThemeToggle data-testid="header-theme-toggle" />
+          <div className="flex items-center gap-1">
+            <SignOutButton action={signOutAction} testId="header-sign-out" />
+            <ThemeToggle data-testid="header-theme-toggle" />
+          </div>
         </header>
         <main id="main" className="flex-1 pb-24 md:pb-0">{children}</main>
       </div>

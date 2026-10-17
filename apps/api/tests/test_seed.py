@@ -4,9 +4,11 @@ from dataclasses import replace
 from pathlib import Path
 
 import pytest
+from pydantic import SecretStr
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from app.core.settings import Settings
 from app.models import Drill, DrillVersion, User
 from app.scripts.seed import (
     DEV_USER_EMAIL,
@@ -38,6 +40,29 @@ def test_seed_creates_the_dev_user(db_session: Session) -> None:
 
     assert user.id is not None
     assert user.email == DEV_USER_EMAIL
+
+
+def test_seed_gives_the_dev_user_a_password_once(
+    db_session: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    settings = Settings(database_url="unused", dev_user_password=SecretStr("seed-password-1"))
+    monkeypatch.setattr("app.scripts.seed.get_settings", lambda: settings)
+
+    user = seed_dev_user(db_session)
+    first_hash = user.password_hash
+    seed_dev_user(db_session)
+
+    assert first_hash is not None and first_hash.startswith("$argon2")
+    assert user.password_hash == first_hash  # an existing password is not replaced
+
+
+def test_seed_without_a_password_leaves_none(
+    db_session: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    settings = Settings(database_url="unused", dev_user_password=None)
+    monkeypatch.setattr("app.scripts.seed.get_settings", lambda: settings)
+
+    assert seed_dev_user(db_session).password_hash is None
 
 
 def test_seed_is_idempotent(db_session: Session) -> None:

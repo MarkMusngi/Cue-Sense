@@ -6,6 +6,7 @@ from app.models.drill import Drill
 from app.models.drill_run import DrillRun
 from app.models.drill_tag import DrillTag
 from app.models.drill_version import DrillVersion
+from app.models.login_session import LoginSession
 from app.models.practice_session import PracticeSession
 from app.models.tag import Tag
 from app.models.user import User
@@ -17,6 +18,7 @@ __all__ = [
     "DrillRun",
     "DrillTag",
     "DrillVersion",
+    "LoginSession",
     "PracticeSession",
     "Tag",
     "User",

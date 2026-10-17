@@ -8,20 +8,20 @@ vi.mock("next/navigation", () => ({ usePathname: () => "/sessions/today" }));
 
 describe("AppShell", () => {
   it("renders the page inside a main landmark", () => {
-    render(<AppShell>Drill list</AppShell>);
+    render(<AppShell userEmail="player@example.test" signOutAction={vi.fn()}>Drill list</AppShell>);
 
     expect(screen.getByRole("main")).toHaveTextContent("Drill list");
   });
 
   it("lets keyboard users skip straight to the page", () => {
-    render(<AppShell>Page</AppShell>);
+    render(<AppShell userEmail="player@example.test" signOutAction={vi.fn()}>Page</AppShell>);
 
     expect(screen.getByRole("link", { name: "Skip to content" })).toHaveAttribute("href", "#main");
     expect(screen.getByRole("main")).toHaveAttribute("id", "main");
   });
 
   it.each(["app-sidebar", "app-tab-bar"])("%s links to every section and marks the current one", (id) => {
-    render(<AppShell>Page</AppShell>);
+    render(<AppShell userEmail="player@example.test" signOutAction={vi.fn()}>Page</AppShell>);
 
     const nav = within(screen.getByTestId(id));
     expect(nav.getByRole("link", { name: "Drills" })).toHaveAttribute("href", "/drills");
