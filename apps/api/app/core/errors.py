@@ -11,6 +11,7 @@ from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
+from sqlalchemy.exc import DataError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 logger = logging.getLogger(__name__)
@@ -90,6 +91,21 @@ def _error_response(
     return JSONResponse(status_code=status_code, content=body.model_dump(mode="json"))
 
 
+def _invalid_characters() -> JSONResponse:
+    return _error_response(
+        422,
+        "validation_failed",
+        "The request contains a NUL character, which cannot be stored.",
+        [
+            ErrorDetail(
+                code="invalid_characters",
+                message="Remove NUL characters.",
+                path=[],
+            )
+        ],
+    )
+
+
 def register_error_handlers(app: FastAPI) -> None:
     @app.exception_handler(AppError)
     async def handle_app_error(request: Request, exc: AppError) -> JSONResponse:
@@ -112,6 +128,13 @@ def register_error_handlers(app: FastAPI) -> None:
     async def handle_http_error(request: Request, exc: StarletteHTTPException) -> JSONResponse:
         code = _HTTP_ERROR_CODES.get(exc.status_code, "http_error")
         return _error_response(exc.status_code, code, str(exc.detail))
+
+    @app.exception_handler(DataError)
+    async def handle_data_error(request: Request, exc: DataError) -> JSONResponse:
+        # Postgres text cannot hold a NUL character. That is the caller's input, not a bug.
+        if "NUL (0x00)" in str(exc.orig):
+            return _invalid_characters()
+        return await handle_unexpected_error(request, exc)
 
     @app.exception_handler(Exception)
     async def handle_unexpected_error(request: Request, exc: Exception) -> JSONResponse:
