@@ -221,6 +221,57 @@ describe("Runner", () => {
     expect(text("runner-taken")).toBe("/1");
   });
 
+  it("treats a call that throws, with no connection, like a failed send and offers Retry", async () => {
+    const user = userEvent.setup();
+    logAttemptAction.mockRejectedValueOnce(new Error("Failed to fetch"));
+    logAttemptAction.mockResolvedValueOnce(saved("a1", 1, progress(MAKE_3_OF_5, ["success"])));
+    renderRunner();
+
+    await user.click(screen.getByTestId("runner-outcome-success"));
+
+    expect(await screen.findByTestId("runner-error")).toHaveTextContent("Couldn’t save attempt 1");
+    expect(screen.getByTestId("rail-sight-0")).not.toHaveAttribute("data-mark", "pending");
+
+    await user.click(screen.getByTestId("runner-retry"));
+
+    await waitFor(() => expect(screen.queryByTestId("runner-error")).toBeNull());
+    expect(logAttemptAction.mock.calls[1][1]).toBe(logAttemptAction.mock.calls[0][1]);
+  });
+
+  it("numbers a failed attempt without counting undone ones", async () => {
+    const user = userEvent.setup();
+    logAttemptAction.mockRejectedValue(new Error("Failed to fetch"));
+    renderRunner(MAKE_3_OF_5, {
+      attempts: [summary("a1", 1, "success"), summary("a2", 2, "fail", true), summary("a3", 3, "fail", true)],
+    });
+
+    await user.click(screen.getByTestId("runner-outcome-success"));
+
+    expect(await screen.findByTestId("runner-error")).toHaveTextContent("Couldn’t save attempt 2");
+  });
+
+  it("puts an attempt back when an undo call throws, and says so", async () => {
+    const user = userEvent.setup();
+    voidAttemptAction.mockRejectedValue(new Error("Failed to fetch"));
+    renderRunner(MAKE_3_OF_5, { attempts: [summary("a1", 1, "success")] });
+
+    await user.click(screen.getByTestId("runner-undo"));
+
+    expect(await screen.findByTestId("runner-message")).toHaveTextContent("Couldn’t undo");
+    expect(text("runner-taken")).toBe("/1");
+  });
+
+  it("says so when ending the run throws", async () => {
+    const user = userEvent.setup();
+    endRunAction.mockRejectedValue(new Error("Failed to fetch"));
+    renderRunner();
+
+    await user.click(screen.getByTestId("runner-end"));
+
+    expect(await screen.findByTestId("runner-message")).toHaveTextContent("Couldn’t end the run");
+    expect(push).not.toHaveBeenCalled();
+  });
+
   it("takes back a tap the server refused because the run had ended", async () => {
     const user = userEvent.setup();
     logAttemptAction.mockResolvedValue({ ok: false, code: "drill_run_ended", error: "Ended." });

@@ -111,7 +111,14 @@ export function Runner({
   const blocked = isEnded || failed !== null;
 
   async function submit(attempt: LocalAttempt) {
-    const result = await logAttemptAction(run.id, attempt.key, inputFor(attempt, isPoints));
+    let result: Awaited<ReturnType<typeof logAttemptAction>>;
+    try {
+      result = await logAttemptAction(run.id, attempt.key, inputFor(attempt, isPoints));
+    } catch {
+      // The call to the Next server itself failed (no connection): treat it like any failed send.
+      dispatch({ type: "failed", key: attempt.key });
+      return;
+    }
     if (result.ok) {
       dispatch({ type: "saved", key: attempt.key, attempt: result.data });
     } else if (result.code === "session_ended" || result.code === "drill_run_ended") {
@@ -152,8 +159,13 @@ export function Runner({
     if (!target || target.id === null || isEnded) return;
     setMessage(null);
     dispatch({ type: "void", key: target.key });
-    const result = await voidAttemptAction(target.id);
-    if (result.ok) {
+    let result: Awaited<ReturnType<typeof voidAttemptAction>> | null = null;
+    try {
+      result = await voidAttemptAction(target.id);
+    } catch {
+      result = null;
+    }
+    if (result?.ok) {
       dispatch({ type: "voided", key: target.key, progress: result.data.set_progress });
     } else {
       dispatch({ type: "void_failed", key: target.key });
@@ -164,17 +176,24 @@ export function Runner({
   function endRun() {
     setMessage(null);
     startEnding(async () => {
-      const result = await endRunAction(run.id, sessionId);
-      if (result.ok) {
+      let result: Awaited<ReturnType<typeof endRunAction>> | null = null;
+      try {
+        result = await endRunAction(run.id, sessionId);
+      } catch {
+        result = null;
+      }
+      if (result?.ok) {
         setIsEnded(true);
         router.push(`/sessions/${sessionId}`);
       } else {
-        setMessage(result.error);
+        setMessage(result ? result.error : "Couldn’t end the run. Check your connection and try again.");
       }
     });
   }
 
-  const attemptNumber = state.attempts.findIndex((attempt) => attempt.key === failed?.key) + 1;
+  // The number the live line gives it: its place among the attempts that are not undone.
+  const attemptNumber =
+    state.attempts.filter((attempt) => !attempt.is_voided).findIndex((attempt) => attempt.key === failed?.key) + 1;
 
   return (
     <div
