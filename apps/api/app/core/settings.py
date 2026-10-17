@@ -15,7 +15,7 @@ class Settings(BaseSettings):
     session_idle_hours: int = Field(default=6, ge=1)
     # How long a sign-in lasts, and whether its cookie is marked Secure (true behind https).
     session_ttl_hours: int = Field(default=720, ge=1)
-    session_cookie_secure: bool = False
+    session_cookie_secure: bool = True
     # Password the seed gives the dev user. Local development and tests only.
     dev_user_password: SecretStr | None = None
 
