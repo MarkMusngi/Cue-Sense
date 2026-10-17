@@ -1,14 +1,17 @@
 """Sign up, sign in, sign out and the session cookie. These tests send real cookies: no
 get_current_user override."""
 
+from collections.abc import Iterator
 from datetime import UTC, datetime, timedelta
 
+import pytest
 from fastapi.testclient import TestClient
 from httpx import Response
 from sqlalchemy import select, update
 from sqlalchemy.orm import Session
 
 from app.core.auth import SESSION_COOKIE
+from app.core.settings import Settings, get_settings
 from app.models import LoginSession, User
 from app.services.auth_service import hash_password
 from tests.conftest import make_client
@@ -21,6 +24,17 @@ from tests.factories import (
 )
 
 PASSWORD = "correct horse battery"
+
+
+@pytest.fixture
+def default_settings(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
+    """Settings as a deployment that sets nothing about the cookie would have them. The test
+    environment itself turns Secure off (as .env.example does for local http)."""
+    monkeypatch.delenv("SESSION_COOKIE_SECURE", raising=False)
+    get_settings.cache_clear()
+    yield
+    monkeypatch.undo()
+    get_settings.cache_clear()
 
 
 def user_with_password(db: Session, email: str = "player@example.test") -> User:
@@ -88,7 +102,9 @@ def test_sign_up_rejects_a_bad_email(db_session: Session) -> None:
 # Sign in
 
 
-def test_sign_in_sets_an_http_only_cookie_and_stores_only_a_hash(db_session: Session) -> None:
+def test_sign_in_sets_an_http_only_cookie_and_stores_only_a_hash(
+    db_session: Session, default_settings: None
+) -> None:
     user = user_with_password(db_session)
     client = make_client(db_session)
 
@@ -100,6 +116,7 @@ def test_sign_in_sets_an_http_only_cookie_and_stores_only_a_hash(db_session: Ses
     assert f"{SESSION_COOKIE}=" in set_cookie
     assert "HttpOnly" in set_cookie
     assert "SameSite=lax" in set_cookie
+    assert "Secure" in set_cookie
     token = client.cookies[SESSION_COOKIE]
     stored = db_session.scalar(select(LoginSession).where(LoginSession.owner_id == user.id))
     assert stored is not None
@@ -126,6 +143,19 @@ def test_an_account_without_a_password_cannot_sign_in(db_session: Session) -> No
     response = sign_in(make_client(db_session), email="nopass@example.test")
 
     assert response.status_code == 401
+
+
+def test_the_cookie_is_secure_by_default_and_not_when_turned_off(
+    db_session: Session, default_settings: None, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    user_with_password(db_session)
+    assert Settings(database_url="unused").session_cookie_secure is True
+
+    local = Settings(database_url="unused", session_cookie_secure=False)
+    monkeypatch.setattr("app.routers.auth.get_settings", lambda: local)
+    response = sign_in(make_client(db_session))
+
+    assert "Secure" not in response.headers["set-cookie"]
 
 
 # The current user

@@ -24,7 +24,8 @@ async function setSessionCookie(session: SessionCookie) {
   (await cookies()).set(SESSION_COOKIE, session.value, {
     httpOnly: true,
     sameSite: "lax",
-    secure: process.env.SESSION_COOKIE_SECURE === "true",
+    // Secure unless SESSION_COOKIE_SECURE=false, the same default as the API.
+    secure: process.env.SESSION_COOKIE_SECURE !== "false",
     path: "/",
     ...(session.max_age === null ? {} : { maxAge: session.max_age }),
   });

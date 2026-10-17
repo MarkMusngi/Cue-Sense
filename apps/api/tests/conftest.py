@@ -77,7 +77,8 @@ def make_client(session: Session, user: User | None = None) -> TestClient:
     app.dependency_overrides[get_db] = override_get_db
     if user is not None:
         app.dependency_overrides[get_current_user] = lambda: user
-    return TestClient(app)
+    # https, so the Secure session cookie is sent back like a browser would send it.
+    return TestClient(app, base_url="https://testserver")
 
 
 def check_deferred_constraints(db: Session) -> None:

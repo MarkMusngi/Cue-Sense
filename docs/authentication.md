@@ -5,7 +5,7 @@ Real sign-in replaced the stubbed dev user in CUE-35. The approach was chosen by
 ## How it works
 
 1. **Sign up** (`POST /users`) or **sign in** (`POST /login-sessions`) with `{email, password}`. Emails are trimmed and lowercased. Passwords are 8 to 128 characters and are hashed with argon2 (`argon2-cffi` defaults).
-2. The API creates a `login_sessions` row and sets the `cue_session` cookie: `HttpOnly`, `SameSite=Lax`, `Path=/`, `Max-Age` of `SESSION_TTL_HOURS` (default 30 days), `Secure` when `SESSION_COOKIE_SECURE=true` (set it behind https).
+2. The API creates a `login_sessions` row and sets the `cue_session` cookie: `HttpOnly`, `SameSite=Lax`, `Path=/`, `Max-Age` of `SESSION_TTL_HOURS` (default 30 days), `Secure` unless `SESSION_COOKIE_SECURE=false`. Secure is the default, in the API and in the web app, so a deployment that forgets the setting is safe; `.env.example` sets it to false for local http.
 3. The cookie value is a random token (`secrets.token_urlsafe(32)`). Only its SHA-256 is stored, so a copy of the database cannot be used to sign in.
 4. `get_current_user` reads the cookie and finds an unexpired row. No cookie, an unknown token or an expired one is a 401 `unauthenticated`. A wrong password, an unknown email and an account with no password are all the same 401 `invalid_credentials`, and an unknown email still costs one hash check, so the two look alike.
 5. **Sign out** (`DELETE /login-sessions/current`) deletes that row and clears the cookie. Other sign-ins stay. Expired rows are deleted whenever someone signs in.

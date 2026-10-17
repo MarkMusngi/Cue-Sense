@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const { cookieStore, redirect, client } = vi.hoisted(() => ({
   cookieStore: { set: vi.fn(), delete: vi.fn() },
@@ -41,7 +41,7 @@ describe("sign in and sign up actions", () => {
     expect(cookieStore.set).toHaveBeenCalledWith(
       "cue_session",
       "tok",
-      expect.objectContaining({ httpOnly: true, sameSite: "lax", path: "/", maxAge: 100, secure: false }),
+      expect.objectContaining({ httpOnly: true, sameSite: "lax", path: "/", maxAge: 100 }),
     );
   });
 
@@ -86,6 +86,30 @@ describe("sign in and sign up actions", () => {
     expect(state).toEqual({
       field_errors: { email: "Enter a valid email address.", password: "Too short." },
     });
+  });
+});
+
+describe("the session cookie's Secure flag", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it("is on unless SESSION_COOKIE_SECURE is false", async () => {
+    client.signIn.mockResolvedValue(SIGNED_IN);
+    vi.stubEnv("SESSION_COOKIE_SECURE", "");
+
+    await expect(signInAction({}, form("a@example.test", "pw-pw-pw-pw"))).rejects.toThrow();
+
+    expect(cookieStore.set.mock.calls[0][2]).toMatchObject({ secure: true });
+  });
+
+  it("is off for local http when SESSION_COOKIE_SECURE is false", async () => {
+    client.signIn.mockResolvedValue(SIGNED_IN);
+    vi.stubEnv("SESSION_COOKIE_SECURE", "false");
+
+    await expect(signInAction({}, form("a@example.test", "pw-pw-pw-pw"))).rejects.toThrow();
+
+    expect(cookieStore.set.mock.calls[0][2]).toMatchObject({ secure: false });
   });
 });
 
