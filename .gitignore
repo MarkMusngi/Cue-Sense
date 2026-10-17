@@ -38,3 +38,4 @@ Thumbs.db
 next-env.d.ts
 *.egg-info/
 playwright/.auth/
+**/playwright/.auth/
