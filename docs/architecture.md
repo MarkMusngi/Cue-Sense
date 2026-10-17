@@ -144,7 +144,9 @@ Stored as JSONB on the drill version, discriminated by `kind`.
 Every table except `users` has `owner_id`, and foreign keys between owned tables include `owner_id` so a row can never reference another owner's data (ADR 0001).
 
 ```
-users(id, email, password_hash, created_at)
+users(id, email, password_hash NULL, created_at)
+login_sessions(id, owner_id, token_hash, created_at, expires_at)
+       -- unique(token_hash); the cookie token is never stored, only its SHA-256
 
 drills(id, owner_id, title, slug, description, difficulty 1-5,
        status [draft|active|archived], current_drill_version_id NULL,
@@ -252,6 +254,11 @@ DELETE /drills/{id}                         drafts without history only, otherwi
 GET    /drills/{id}/versions                version history
 GET    /tags            POST /tags
 
+POST   /users                               sign up (signs in too)
+POST   /login-sessions                      sign in: sets the cue_session cookie
+DELETE /login-sessions/current              sign out
+GET    /users/me                            the signed-in user
+
 POST   /practice-sessions                   start a practice session (closes any open one)
 GET    /practice-sessions                   list
 GET    /practice-sessions/{id}              detail
@@ -273,7 +280,7 @@ Rules:
 - One consistent error shape (below).
 - Another user's resources return 404.
 - 409 for a stale `base_drill_version_id`, an archived drill, or an ended session.
-- The current user comes from one `get_current_user` dependency. Until Phase 3 it returns the seeded dev user.
+- The current user comes from one `get_current_user` dependency, which reads the `cue_session` cookie. No valid session is a 401 `unauthenticated`. See [authentication.md](authentication.md).
 
 **Error shape.** Every error response, including request validation errors, is:
 
@@ -379,7 +386,7 @@ shot_observations(id, owner_id, video_id, analysis_job_id, start_ms, end_ms,
 
 1. **Game types:** resolved. Pool only for the MVP (`table.kind = pool`). Snooker or carom would change dimensions, ball sizes and pockets.
 2. **Table sizes:** resolved. 9 ft only (ADR 0006).
-3. **Authentication timing:** a stubbed dev user until Phase 3, or real login earlier?
+3. **Authentication timing:** resolved. Real login in Phase 3: cookie sessions and argon2 passwords ([authentication.md](authentication.md)).
 4. **Phone at the table:** if yes, make the session runner a PWA.
 5. **Video storage:** which drive, and how much space (1080p at 60 fps adds up to several GB per hour).
 

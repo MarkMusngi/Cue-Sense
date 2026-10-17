@@ -20,6 +20,7 @@ node_modules/
 out/
 coverage/
 playwright-report/
+playwright/.auth/
 test-results/
 
 # Docker / local data
@@ -36,3 +37,4 @@ Thumbs.db
 *.tsbuildinfo
 next-env.d.ts
 *.egg-info/
+playwright/.auth/

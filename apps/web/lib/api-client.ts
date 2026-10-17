@@ -1,3 +1,5 @@
+import { parseSessionCookie, sessionCookieHeader, type SessionCookie } from "@/lib/auth-session";
+
 // Response types mirror the API JSON and stay snake_case (README decision 7).
 export type HealthResponse = {
   status: string;
@@ -115,6 +117,8 @@ export type DrillFilters = {
 /** One problem in an API error: where it is (a path into the request body) and what. */
 export type ApiErrorDetail = { code: string; message: string; path: (string | number)[] };
 
+export type UserRead = { id: string; email: string; created_at: string };
+
 export type ApiResult<T> =
   | { ok: true; data: T }
   | { ok: false; error: string; code?: string; details?: ApiErrorDetail[] };
@@ -138,14 +142,17 @@ export async function getHealth(): Promise<HealthResult> {
 }
 
 async function request<T>(
-  method: "GET" | "POST" | "PUT" | "PATCH",
+  method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE",
   path: string,
   body?: unknown,
   extraHeaders?: Record<string, string>,
+  onResponse?: (response: Response) => void,
 ): Promise<ApiResult<T>> {
   try {
+    const cookie = await sessionCookieHeader();
     const headers = {
       ...(body === undefined ? {} : { "Content-Type": "application/json" }),
+      ...(cookie ? { Cookie: cookie } : {}),
       ...extraHeaders,
     };
     const response = await fetch(`${getApiUrl()}${path}`, {
@@ -154,6 +161,7 @@ async function request<T>(
       headers: Object.keys(headers).length > 0 ? headers : undefined,
       body: body === undefined ? undefined : JSON.stringify(body),
     });
+    onResponse?.(response);
     const text = await response.text();
     let parsed: unknown;
     try {
@@ -361,4 +369,38 @@ export function setAttemptVoided(
   return request<AttemptRead>("PATCH", `/attempts/${encodeURIComponent(attemptId)}`, {
     voided_at: voidedAt,
   });
+}
+
+// Accounts and sign-in (docs/authentication.md).
+
+export type SignedIn = { user: UserRead; session: SessionCookie };
+
+async function startSessionVia(
+  path: "/users" | "/login-sessions",
+  email: string,
+  password: string,
+): Promise<ApiResult<SignedIn>> {
+  const captured: { session: SessionCookie | null } = { session: null };
+  const result = await request<UserRead>("POST", path, { email, password }, undefined, (response) => {
+    captured.session = parseSessionCookie(response.headers.getSetCookie());
+  });
+  if (!result.ok) return result;
+  if (!captured.session) return { ok: false, error: "The API did not start a session." };
+  return { ok: true, data: { user: result.data, session: captured.session } };
+}
+
+export function signUp(email: string, password: string): Promise<ApiResult<SignedIn>> {
+  return startSessionVia("/users", email, password);
+}
+
+export function signIn(email: string, password: string): Promise<ApiResult<SignedIn>> {
+  return startSessionVia("/login-sessions", email, password);
+}
+
+export function signOut(): Promise<ApiResult<undefined>> {
+  return request<undefined>("DELETE", "/login-sessions/current");
+}
+
+export function getMe(): Promise<ApiResult<UserRead>> {
+  return getJson<UserRead>("/users/me");
 }

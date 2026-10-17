@@ -21,7 +21,7 @@ Last checked against `main` at the merge of the Playwright harness (CUE-19), plu
 | 8 Session runner and history | Done | API (CUE-14); runner, hub and history screens plus an attempts list endpoint (CUE-31, `docs/session-runner.md`) |
 | 9 End-to-end tests | Done | Journeys in `apps/web/e2e` (CUE-34): see the prompt below for which spec covers each |
 | 10 Dashboard and `/stats` | Todo | Contract written in `docs/stats-contract.md` |
-| 11 Authentication | Todo | Part of Phase 3 |
+| 11 Authentication | Done | Cookie sessions and argon2 passwords (CUE-35, `docs/authentication.md`) |
 
 Other work already on `main`: the Night hall design system and app shell (CUE-13, `docs/design-system.md`) and the seeded starter drills.
 
