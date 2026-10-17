@@ -9,11 +9,13 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.core.settings import get_settings
 from app.db.session import get_engine
 from app.models import Drill, DrillVersion, User
+from app.services.auth_service import hash_password
 from app.services.layout_service import validate_layout
 
-# Stubbed dev user until real authentication in Phase 3. Synthetic, not a real address.
+# The local dev user. Synthetic, not a real address. Its password comes from DEV_USER_PASSWORD.
 DEV_USER_EMAIL = "dev@cuesense.local"
 
 TABLE: dict[str, Any] = {"kind": "pool", "size_ft": 9}
@@ -166,6 +168,9 @@ def seed_dev_user(db: Session) -> User:
         user = User(email=DEV_USER_EMAIL)
         db.add(user)
         db.flush()
+    password = get_settings().dev_user_password
+    if user.password_hash is None and password is not None:
+        user.password_hash = hash_password(password.get_secret_value())
     return user
 
 

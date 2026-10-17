@@ -65,6 +65,17 @@ class ValidationFailedError(AppError):
         super().__init__("validation_failed", message, details)
 
 
+class UnauthenticatedError(AppError):
+    """No valid sign-in: also used for a wrong password, so the two look the same."""
+
+    status_code = 401
+
+    def __init__(
+        self, code: str = "unauthenticated", message: str = "Sign in to continue."
+    ) -> None:
+        super().__init__(code, message)
+
+
 class ServiceUnavailableError(AppError):
     status_code = 503
 
