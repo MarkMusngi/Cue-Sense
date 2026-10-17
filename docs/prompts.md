@@ -19,7 +19,7 @@ Last checked against `main` at the merge of the Playwright harness (CUE-19), plu
 | 6 Table editor component | Done | CUE-21, on layout v2 (`docs/table-editor.md`). PR 21 (CUE-11, layout v1) was closed and replaced |
 | 7 Drill editor and detail screens | Done | Library (CUE-15), editor and detail (CUE-26, `docs/drill-editor.md`) |
 | 8 Session runner and history | Done | API (CUE-14); runner, hub and history screens plus an attempts list endpoint (CUE-31, `docs/session-runner.md`) |
-| 9 End-to-end tests | Todo | Playwright harness and CI `e2e` job are in place (CUE-18); the four journeys wait for the editor and runner |
+| 9 End-to-end tests | Done | Journeys in `apps/web/e2e` (CUE-34): see the prompt below for which spec covers each |
 | 10 Dashboard and `/stats` | Todo | Contract written in `docs/stats-contract.md` |
 | 11 Authentication | Todo | Part of Phase 3 |
 
@@ -254,7 +254,9 @@ finish session. Add session history list and detail views.
 Plan first, then implement.
 ```
 
-## Prompt 9: End-to-end tests (Sonnet 5.5)
+## Prompt 9: End-to-end tests (Sonnet 5.5) (done)
+
+Covered by: (1) create a drill by placing balls, `drills.spec.ts`; (2) edit it and see a new version, `drills.spec.ts`; (3) ten attempts, finish and history totals, `journeys.spec.ts` (and the runner journey in `sessions.spec.ts`); (4) a validation error, `drills.spec.ts` (an invalid pass threshold) and `table-editor.spec.ts` (a dropped ball is pushed clear of another, so a real overlap error cannot be made from the editor; the API's overlap error mapping is tested in the drill editor's component tests).
 
 Do this after Prompts 6 to 8. The Playwright harness is already set up (CUE-18): config in `apps/web/playwright.config.ts`, specs in `apps/web/e2e`, run with `pnpm --filter web e2e` against the running stack, and a CI `e2e` job in `.github/workflows/ci.yml`. New specs go in that folder and run in that job; no workflow change is needed.
 
