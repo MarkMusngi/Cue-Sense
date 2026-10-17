@@ -18,7 +18,7 @@ Last checked against `main` at the merge of the Playwright harness (CUE-19), plu
 | 5 Drill CRUD API | Done | CUE-10 |
 | 6 Table editor component | Done | CUE-21, on layout v2 (`docs/table-editor.md`). PR 21 (CUE-11, layout v1) was closed and replaced |
 | 7 Drill editor and detail screens | Done | Library (CUE-15), editor and detail (CUE-26, `docs/drill-editor.md`) |
-| 8 Session runner and history | Partly | API and set progress done (CUE-14); screens not started |
+| 8 Session runner and history | Done | API (CUE-14); runner, hub and history screens plus an attempts list endpoint (CUE-31, `docs/session-runner.md`) |
 | 9 End-to-end tests | Todo | Playwright harness and CI `e2e` job are in place (CUE-18); the four journeys wait for the editor and runner |
 | 10 Dashboard and `/stats` | Todo | Contract written in `docs/stats-contract.md` |
 | 11 Authentication | Todo | Part of Phase 3 |
@@ -43,10 +43,9 @@ Done: prompts 0 to 5 (backend foundation), the design system, the drill library 
 
 Next:
 
-1. Prompt 8: session runner and history.
-2. Prompt 9: end-to-end tests, once the editor and runner exist.
-3. Prompt 11 (authentication) and Prompt 10 (dashboard), in either order, once real sessions exist.
-4. Then video ingestion and vision (Phases 4 and 5), which are out of scope until the MVP is done.
+1. Prompt 9: end-to-end tests, once the editor and runner exist.
+2. Prompt 11 (authentication) and Prompt 10 (dashboard), in either order, once real sessions exist.
+3. Then video ingestion and vision (Phases 4 and 5), which are out of scope until the MVP is done.
 
 Separately, record footage following section 8 of the architecture doc. This needs no code and can happen at any time; the earlier the better, because it is the data Phase 5 needs.
 
@@ -233,9 +232,9 @@ data keep snake_case property names (no conversion layer). Mobile-friendly
 layout. Add Vitest tests for the pure logic, and stable data-testid attributes.
 ```
 
-## Prompt 8: Session runner and history screens (Sonnet 5.5) (partly done)
+## Prompt 8: Session runner and history screens (Sonnet 5.5) (done)
 
-The API side is done (CUE-14): sessions, drill runs, attempts with `Idempotency-Key`, undo, and server-computed set progress. What remains is the phone UI. The offline attempt queue was deliberately cut, so the runner requires a connection.
+The API side (CUE-14) and the screens (CUE-31, `docs/session-runner.md`) are done. The prompt below is kept for reference. The offline attempt queue was deliberately cut, so the runner requires a connection.
 
 ```
 Build the phone-first session runner against the sessions API in
