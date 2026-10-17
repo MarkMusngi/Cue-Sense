@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 
 from app.core.errors import register_error_handlers
-from app.routers import attempts, auth, drill_runs, drills, health, practice_sessions, tags
+from app.routers import attempts, auth, drill_runs, drills, health, practice_sessions, stats, tags
 
 
 def create_app() -> FastAPI:
@@ -14,6 +14,7 @@ def create_app() -> FastAPI:
     app.include_router(practice_sessions.router)
     app.include_router(drill_runs.router)
     app.include_router(attempts.router)
+    app.include_router(stats.router)
     return app
 
 
