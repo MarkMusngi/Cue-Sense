@@ -24,6 +24,8 @@ export type LocalAttempt = {
   outcome: Outcome;
   points: number | null;
   duration_ms: number | null;
+  /** When it was tapped, kept so a retry reports the real time. */
+  tapped_at: string | null;
   status: AttemptStatus;
   is_voided: boolean;
   /** An undo that has been sent and not yet confirmed. */
@@ -38,9 +40,17 @@ export type RunnerState = {
 
 export type RunnerAction =
   | { type: "load"; attempts: AttemptSummary[]; progress: SetProgress }
-  | { type: "log"; key: string; outcome: Outcome; points: number | null; duration_ms: number | null }
+  | {
+      type: "log";
+      key: string;
+      outcome: Outcome;
+      points: number | null;
+      duration_ms: number | null;
+      tapped_at: string;
+    }
   | { type: "saved"; key: string; attempt: AttemptRead }
   | { type: "failed"; key: string }
+  | { type: "discard"; key: string }
   | { type: "retry"; key: string }
   | { type: "void"; key: string }
   | { type: "voided"; key: string; progress: SetProgress }
@@ -55,6 +65,7 @@ function fromServer(attempt: AttemptSummary): LocalAttempt {
     outcome: attempt.outcome,
     points: attempt.points,
     duration_ms: attempt.duration_ms,
+    tapped_at: attempt.tapped_at,
     status: "saved",
     is_voided: attempt.voided_at !== null,
     is_voiding: false,
@@ -83,6 +94,7 @@ export function runnerReducer(state: RunnerState, action: RunnerAction): RunnerS
             outcome: action.outcome,
             points: action.points,
             duration_ms: action.duration_ms,
+            tapped_at: action.tapped_at,
             status: "sending",
             is_voided: false,
             is_voiding: false,
@@ -96,6 +108,9 @@ export function runnerReducer(state: RunnerState, action: RunnerAction): RunnerS
       };
     case "failed":
       return change(state, action.key, { status: "failed" });
+    case "discard":
+      // The server refused it (the run or session had ended): it was never recorded.
+      return { ...state, attempts: state.attempts.filter((attempt) => attempt.key !== action.key) };
     case "retry":
       return change(state, action.key, { status: "sending" });
     case "void":
@@ -145,8 +160,12 @@ export function lastCounted(state: RunnerState): LocalAttempt | null {
   return null;
 }
 
-/** The attempt Undo would void: the newest counted one, once it has been saved. */
+/**
+ * The attempt Undo would void: the newest counted one, once it has been saved. None while
+ * an undo is still being sent, so a quick double tap cannot undo two attempts.
+ */
 export function undoTarget(state: RunnerState): LocalAttempt | null {
+  if (state.attempts.some((attempt) => attempt.is_voiding)) return null;
   const last = lastCounted(state);
   return last && last.status === "saved" && last.id !== null && !last.is_voiding ? last : null;
 }

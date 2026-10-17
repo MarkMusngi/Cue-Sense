@@ -43,7 +43,7 @@ function apply(state: RunnerState, ...actions: RunnerAction[]): RunnerState {
 }
 
 function log(key: string, outcome: Outcome = "success", points: number | null = null): RunnerAction {
-  return { type: "log", key, outcome, points, duration_ms: null };
+  return { type: "log", key, outcome, points, duration_ms: null, tapped_at: "2026-10-16T10:00:00Z" };
 }
 
 function serverAttempt(id: string, number: number, progress: SetProgress): AttemptRead {
@@ -93,11 +93,18 @@ describe("runnerReducer", () => {
         outcome: "fail",
         points: null,
         duration_ms: null,
+        tapped_at: "2026-10-16T10:00:00Z",
         status: "sending",
         is_voided: false,
         is_voiding: false,
       },
     ]);
+  });
+
+  it("drops an attempt the server refused", () => {
+    const state = apply(initialRunnerState, log("k1"), log("k2"), { type: "discard", key: "k1" });
+
+    expect(state.attempts.map((attempt) => attempt.key)).toEqual(["k2"]);
   });
 
   it("marks an attempt saved and keeps the server's progress", () => {
@@ -213,6 +220,18 @@ describe("undo and failures", () => {
     expect(undoTarget(loaded)?.id).toBe("a3");
     const afterUndo = apply(loaded, { type: "void", key: "a3" }, { type: "voided", key: "a3", progress: progressOf(MAKE_3_OF_5, ["success"]) });
     expect(undoTarget(afterUndo)?.id).toBe("a1");
+  });
+
+  it("cannot undo again while an undo is still being sent", () => {
+    const voiding = apply(loaded, { type: "void", key: "a3" });
+
+    expect(undoTarget(voiding)).toBeNull();
+    const confirmed = apply(voiding, {
+      type: "voided",
+      key: "a3",
+      progress: progressOf(MAKE_3_OF_5, ["success"]),
+    });
+    expect(undoTarget(confirmed)?.id).toBe("a1");
   });
 
   it("waits for a tap to be saved before it can be undone", () => {

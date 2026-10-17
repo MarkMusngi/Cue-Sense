@@ -6,6 +6,7 @@ import { DifficultyPips } from "@/components/difficulty-pips";
 import { DrillActions } from "@/components/drill-detail/drill-actions";
 import { ScoringSummary } from "@/components/drill-detail/scoring-summary";
 import { VersionList } from "@/components/drill-detail/version-list";
+import { StartRunButton } from "@/components/sessions/session-buttons";
 import { TableEditor } from "@/components/table-editor/table-editor";
 import { ErrorCard } from "@/components/state-cards";
 import { getDrill, getDrillVersions } from "@/lib/api-client";
@@ -61,6 +62,7 @@ export default async function DrillDetailPage({ params }: { params: Promise<{ id
           {version && <span className="font-mono">v{version.version_number}</span>}
         </div>
         {data.description && <p className="max-w-prose text-[15px] text-muted">{data.description}</p>}
+        <StartRunButton drill={data} />
         <DrillActions drill={data} />
       </header>
 
