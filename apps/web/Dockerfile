@@ -1,5 +1,5 @@
 # Development image. Build context is the repo root, so the pnpm workspace files are available.
-FROM node:24-alpine
+FROM node:26-alpine
 
 WORKDIR /app
 RUN corepack enable
